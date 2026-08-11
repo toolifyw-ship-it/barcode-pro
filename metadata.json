@@ -1,0 +1,6 @@
+{
+  "name": "Barcode & QR Code Generator",
+  "description": "An instant, client-side, professional generator for Code 128, Code 39, EAN, UPC, QR codes, PDF417, and other standard barcodes.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
