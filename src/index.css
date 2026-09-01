@@ -452,3 +452,57 @@ img {
   background: #2563eb;
   transform: scale(1.02);
 }
+
+/* ==========================================================
+   MODULE 1: AD CONTAINER CLS PREVENTION & SKELETON LOADERS
+   ========================================================== */
+.ad-slot-wrapper {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 1.5rem auto;
+  overflow: hidden;
+  contain: layout style;
+}
+
+.ad-banner-responsive {
+  min-height: 90px;
+  max-width: 728px;
+  width: 100%;
+  aspect-ratio: 728 / 90;
+}
+
+.ad-rectangle-responsive {
+  min-height: 250px;
+  max-width: 300px;
+  width: 100%;
+  aspect-ratio: 300 / 250;
+}
+
+.ad-skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(30, 41, 59, 0.4) 0%, rgba(51, 65, 85, 0.6) 50%, rgba(30, 41, 59, 0.4) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite ease-in-out;
+  border-radius: 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.2);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Print Optimization */
+@media print {
+  .ad-slot-wrapper,
+  .no-print,
+  #educational-guide-hub,
+  header,
+  footer {
+    display: none !important;
+  }
+}
