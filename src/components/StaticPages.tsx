@@ -546,6 +546,63 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
           </div>
         );
 
+      case "/pricing":
+        return (
+          <div className="space-y-6 text-xs sm:text-sm leading-relaxed">
+            <div>
+              <h3 className="text-base font-extrabold text-blue-500 mb-2">100% Free Forever for Commercial & Personal Use</h3>
+              <p className="mb-3 text-slate-400">
+                At Barcoder Pro, we believe essential barcode and QR code utilities should remain accessible to all small business owners, warehouse operators, and retail merchants globally with zero paywalls, zero subscription tiers, and zero hidden licensing fees.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className={`p-6 rounded-2xl border ${bgSubCard} space-y-4`}>
+                <div className="flex items-center justify-between">
+                  <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-extrabold text-xs rounded-lg uppercase">
+                    Commercial Free License
+                  </span>
+                  <span className="text-2xl font-black text-white">$0</span>
+                </div>
+                <h4 className="text-lg font-bold text-white">Full Feature Access</h4>
+                <p className="text-xs text-slate-400">Complete access to all generator features with lifetime commercial rights.</p>
+                <ul className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-3">
+                  <li className="flex items-center gap-2"><span className="text-emerald-400 font-bold">✓</span> All 18+ Barcode Symbologies (Code 128, EAN-13, UPC, etc.)</li>
+                  <li className="flex items-center gap-2"><span className="text-emerald-400 font-bold">✓</span> High-Density Vector PNG Exports (300+ DPI Compatible)</li>
+                  <li className="flex items-center gap-2"><span className="text-emerald-400 font-bold">✓</span> Bulk Batch Generator (1 to 500+ Items with ZIP Download)</li>
+                  <li className="flex items-center gap-2"><span className="text-emerald-400 font-bold">✓</span> A4 Sheet Label Wizard for Standard Office Printers</li>
+                  <li className="flex items-center gap-2"><span className="text-emerald-400 font-bold">✓</span> 100% Client-Side Private (Zero Database Storage)</li>
+                  <li className="flex items-center gap-2"><span className="text-emerald-400 font-bold">✓</span> Amazon FBA, eBay, and Retail POS Compliant</li>
+                </ul>
+              </div>
+
+              <div className={`p-6 rounded-2xl border ${bgSubCard} space-y-4 flex flex-col justify-between`}>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 font-extrabold text-xs rounded-lg uppercase">
+                      Enterprise & Custom
+                    </span>
+                    <span className="text-lg font-bold text-blue-400">Consulting</span>
+                  </div>
+                  <h4 className="text-lg font-bold text-white mt-3">Custom Logistics Integrations</h4>
+                  <p className="text-xs text-slate-400 mt-1">For organizations requiring on-premises self-hosted barcode servers, custom SAP/ERP label automations, or dedicated support.</p>
+                  <ul className="space-y-2 text-xs text-slate-300 border-t border-slate-800 pt-3 mt-3">
+                    <li className="flex items-center gap-2"><span className="text-blue-400 font-bold">•</span> Tailored WMS & ERP Print Integrations</li>
+                    <li className="flex items-center gap-2"><span className="text-blue-400 font-bold">•</span> High-Speed Headless Barcode Generation Libraries</li>
+                    <li className="flex items-center gap-2"><span className="text-blue-400 font-bold">•</span> Direct Architectural Guidance from Sukanta Singha</li>
+                  </ul>
+                </div>
+                <button 
+                  onClick={() => navigate("/contact-us")} 
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors mt-4"
+                >
+                  Contact Technical Team →
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="text-center py-10">
@@ -569,6 +626,7 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
       case "/search": return { title: "Search Barcoder Pro Suite", subtitle: "Find barcode generators, technical specs, and blog articles instantly.", icon: "🔍" };
       case "/contact-us": case "/contact": return { title: "Contact Support & Developer", subtitle: "Direct response from sukanta.singha786@gmail.com within 24 hours.", icon: "📩" };
       case "/feedback": return { title: "Community Feedback & Testimonials", subtitle: "Verified reviews from merchants and logistics teams worldwide.", icon: "⭐" };
+      case "/pricing": return { title: "Commercial Pricing & Licensing", subtitle: "100% Free Forever for Commercial & Personal Use • Zero Hidden Fees.", icon: "💳" };
       default: return { title: "Barcoder Pro", subtitle: "Free Barcode Generator Suite", icon: "📄" };
     }
   };

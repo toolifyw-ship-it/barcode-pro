@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barcoder Pro - Redirecting...</title>
+  <script>
+    // Universal Single Page Application 404 Rescue Handler
+    (function() {
+      var pathname = window.location.pathname;
+      var search = window.location.search || '';
+      var hash = window.location.hash || '';
+      // Store intended path in sessionStorage for SPA hydration
+      try {
+        sessionStorage.setItem('spa_redirect_path', pathname + search + hash);
+      } catch (e) {}
+      // Redirect to root with query parameter fallback
+      window.location.replace('/' + (pathname.startsWith('/') ? pathname.slice(1) : pathname) + search + hash);
+    })();
+  </script>
+</head>
+<body style="background:#0b0f1a;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:20px;text-align:center;">
+  <div>
+    <div style="width:48px;height:48px;background:#2563eb;color:#fff;font-weight:900;font-size:24px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">B</div>
+    <h2 style="font-size:20px;font-weight:800;margin:0 0 8px 0;color:#ffffff;">Loading Barcoder Pro...</h2>
+    <p style="font-size:13px;color:#94a3b8;margin:0 0 16px 0;">Routing to requested tool or documentation...</p>
+    <a href="/" style="font-size:12px;color:#60a5fa;text-decoration:none;font-weight:bold;padding:8px 16px;border:1px solid #1e3a8a;border-radius:8px;background:rgba(37,99,235,0.1);">← Return to Home</a>
+  </div>
+</body>
+</html>

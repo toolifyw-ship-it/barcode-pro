@@ -28,7 +28,7 @@ export const BlogSystem: React.FC<BlogSystemProps> = ({ path, isDarkMode, naviga
       },
       {
         id: "what-is-ean13",
-        title: "The Anatomy of EAN-13 Product Barcodes: From India Prefix to Checksum Calculation",
+        title: "The Anatomy of EAN-13 Product Barcodes: From Country Prefix to Checksum Calculation",
         subtitle: "A complete technical specification of European Product Association retail standards, prefixes, and Modulo checksums.",
         tag: "Retail POS",
         readTime: "7 min read",
@@ -61,6 +61,33 @@ export const BlogSystem: React.FC<BlogSystemProps> = ({ path, isDarkMode, naviga
         readTime: "10 min read",
         author: "Sukanta Singha",
         url: "/blog/gs1-guide"
+      },
+      {
+        id: "ean13-vs-code128",
+        title: "EAN-13 vs. Code 128: Choosing the Right Barcode for Your Business",
+        subtitle: "Key differences in character capacity, scanner compatibility, and point-of-sale checkout requirements.",
+        tag: "Symbology Comparison",
+        readTime: "6 min read",
+        author: "Sukanta Singha",
+        url: "/blog/ean13-vs-code128"
+      },
+      {
+        id: "print-quality-dpi-guide",
+        title: "Barcode Print Quality & Thermal DPI Guide: Preventing Scan Errors",
+        subtitle: "Essential DPI requirements (203 vs 300 vs 600 DPI), bar width reduction (BWR), and ISO/IEC 15416 verification.",
+        tag: "Thermal Printing",
+        readTime: "7 min read",
+        author: "Sukanta Singha",
+        url: "/blog/print-quality-dpi-guide"
+      },
+      {
+        id: "barcode-scanner-app-guide",
+        title: "Mobile Camera Barcode Scanning: Best Practices & Optical Physics",
+        subtitle: "How optical image decoders handle low-light environments, glare, focus distance, and skew angles.",
+        tag: "Optical Scanning",
+        readTime: "6 min read",
+        author: "Sukanta Singha",
+        url: "/blog/barcode-scanner-app-guide"
       }
     ];
 
@@ -188,6 +215,51 @@ export const BlogSystem: React.FC<BlogSystemProps> = ({ path, isDarkMode, naviga
     `;
     widgetFormat = "QR";
     widgetPlaceholder = "https://barcoderpro-zeta.vercel.app/";
+  } else if (path.includes("ean13-vs-code128")) {
+    blogTitle = "EAN-13 vs. Code 128: Choosing the Right Barcode for Your Business";
+    blogSubtitle = "Key differences in character capacity, scanner compatibility, and point-of-sale checkout requirements.";
+    blogBody = `
+      <h3 class="text-base font-bold text-blue-500 mt-4 mb-2">⚖️ 1. Core Structural Differences</h3>
+      <p class="mb-4">While <strong>EAN-13</strong> is strictly a 13-digit numeric code designed for consumer retail checkout scanners, <strong>Code 128</strong> is an alphanumeric powerhouse capable of encoding all 128 ASCII characters with variable lengths.</p>
+
+      <h3 class="text-base font-bold text-blue-500 mt-4 mb-2">🏬 2. When to Use EAN-13</h3>
+      <p class="mb-4">Use EAN-13 if you sell physical goods through retail brick-and-mortar stores or global e-commerce platforms like Amazon. Every unique retail SKU requires its own EAN-13 (or UPC-A in North America).</p>
+
+      <h3 class="text-base font-bold text-blue-500 mt-4 mb-2">📦 3. When to Use Code 128</h3>
+      <p class="mb-4">Use Code 128 for shipping cartons, pallet logistics, asset tracking tags, internal inventory serials, and healthcare equipment where letters and numbers must be encoded compactly.</p>
+    `;
+    widgetFormat = "CODE128";
+    widgetPlaceholder = "CARTON-88902-X";
+  } else if (path.includes("print-quality-dpi-guide")) {
+    blogTitle = "Barcode Print Quality & Thermal DPI Guide: Preventing Scan Errors";
+    blogSubtitle = "Essential DPI requirements (203 vs 300 vs 600 DPI), bar width reduction (BWR), and ISO/IEC 15416 verification.";
+    blogBody = `
+      <h3 class="text-base font-bold text-blue-500 mt-4 mb-2">🖨️ 1. Understanding Thermal Resolution (DPI)</h3>
+      <p class="mb-4">Standard direct thermal and thermal transfer printers operate at <strong>203 DPI</strong>, <strong>300 DPI</strong>, or <strong>600 DPI</strong>. A 203 DPI printhead has 8 dots per millimeter, meaning a single narrow bar must measure an exact multiple of 0.125 mm to prevent rounding distortion.</p>
+
+      <h3 class="text-base font-bold text-blue-500 mt-4 mb-2">📐 2. Bar Width Reduction (BWR)</h3>
+      <p class="mb-4">When ink or thermal ribbon melts onto porous paper, it bleeds slightly outward. Professional barcode generators compensate for this press gain using Bar Width Reduction (BWR) to ensure bars do not merge into neighboring quiet zones.</p>
+
+      <h3 class="text-base font-bold text-blue-500 mt-4 mb-2">🔍 3. ISO/IEC 15416 Verification Checklist</h3>
+      <p class="mb-4">Ensure your print verification achieves at least Grade B (3.0) or higher across symbol contrast, modulation, defects, and quiet zone margins before proceeding with commercial production runs.</p>
+    `;
+    widgetFormat = "CODE128";
+    widgetPlaceholder = "DPI-TEST-300";
+  } else if (path.includes("barcode-scanner-app-guide")) {
+    blogTitle = "Mobile Camera Barcode Scanning: Best Practices & Optical Physics";
+    blogSubtitle = "How optical image decoders handle low-light environments, glare, focus distance, and skew angles.";
+    blogBody = `
+      <h3 class="text-base font-bold text-blue-500 mt-4 mb-2">📸 1. Optical Capture Fundamentals</h3>
+      <p class="mb-4">Webcam and smartphone barcode decoders analyze video frames using computer vision algorithms that detect edge gradients and compute binarized raster lines. Ensuring sharp focus and adequate ambient lighting is critical for instant decoding.</p>
+
+      <h3 class="text-base font-bold text-blue-500 mt-4 mb-2">💡 2. Eliminating Surface Reflection & Glare</h3>
+      <p class="mb-4">Glossy packaging and laminated labels reflect direct overhead lighting into the camera lens, blinding the sensor. Tilting the camera at a slight 15-degree angle eliminates specular glare while preserving scanning contrast.</p>
+
+      <h3 class="text-base font-bold text-blue-500 mt-4 mb-2">📏 3. Quiet Zone Margins</h3>
+      <p class="mb-4">Always preserve a minimum clear margin (quiet zone) of at least 10 times the narrowest bar width on both sides of a 1D barcode so scanning algorithms can locate the start and stop guard patterns.</p>
+    `;
+    widgetFormat = "CODE128";
+    widgetPlaceholder = "SCAN-OPTIC-44";
   } else {
     blogTitle = "Universal GS1 Compliance: How to Properly Register Commercial Goods";
     blogSubtitle = "Step-by-step guide to assigning company prefixes, allocating GTIN numbers, and configuring printing setups.";

@@ -407,6 +407,40 @@ export default function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  // Universal SPA route recovery from 404 handler
+  useEffect(() => {
+    try {
+      const redirectPath = sessionStorage.getItem('spa_redirect_path');
+      if (redirectPath) {
+        sessionStorage.removeItem('spa_redirect_path');
+        if (redirectPath !== window.location.pathname) {
+          navigate(redirectPath);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const STATIC_PAGES_LIST = [
+    "/about-us", "/about",
+    "/privacy-policy", "/privacy",
+    "/terms-of-service", "/terms",
+    "/contact-us", "/contact",
+    "/editorial-policy",
+    "/disclaimer",
+    "/cookies-policy",
+    "/author",
+    "/sitemap",
+    "/search",
+    "/feedback",
+    "/reviews",
+    "/pricing"
+  ];
+
+  const isStaticPath = (p: string) => STATIC_PAGES_LIST.includes(p);
+  const isBlogPath = (p: string) => p === "/blog" || p === "/blog/" || p.startsWith("/blog/");
+  const isScannerPath = (p: string) => p === "/barcode-scanner";
+  const isBulkPath = (p: string) => p === "/bulk-barcode-generator";
+
   const [userInput, setUserInput] = useState<string>("1000202856");
   const [showCookieBanner, setShowCookieBanner] = useState<boolean>(() => {
     try {
@@ -4151,7 +4185,15 @@ export default function App() {
             </button>
         </div>
 
-        {(!["/barcode-scanner", "/bulk-barcode-generator"].includes(currentPath) && !currentPath.startsWith("/blog/")) ? (
+        {isScannerPath(currentPath) ? (
+          renderScannerPage()
+        ) : isBulkPath(currentPath) ? (
+          renderBulkGeneratorPage()
+        ) : isStaticPath(currentPath) ? (
+          renderStaticPage(currentPath)
+        ) : isBlogPath(currentPath) ? (
+          renderBlogPage(currentPath)
+        ) : (
           <>
             <div className="text-center mb-6 sm:mb-8 max-w-2xl mx-auto">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent px-2">
@@ -5550,14 +5592,6 @@ export default function App() {
             </div>
         </div>
         </>
-        ) : currentPath === "/barcode-scanner" ? (
-          renderScannerPage()
-        ) : currentPath === "/bulk-barcode-generator" ? (
-          renderBulkGeneratorPage()
-        ) : ["/about-us", "/privacy-policy", "/terms-of-service", "/contact-us", "/feedback"].includes(currentPath) ? (
-          renderStaticPage(currentPath)
-        ) : (
-          renderBlogPage(currentPath)
         )}
 
       </main>
@@ -5636,12 +5670,12 @@ export default function App() {
               <h4 className="text-xs font-extrabold uppercase tracking-widest text-blue-400">Blog & Knowledge Base</h4>
               <ul className="space-y-2 text-xs font-medium text-slate-400">
                 <li>
-                  <button onClick={() => setActiveDropdown("blog")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left flex items-center gap-1.5">
+                  <button onClick={() => navigate("/blog")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left flex items-center gap-1.5">
                     <span>📰</span> Barcode Blog & Guides
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => navigate("/blog/how-to-generate-gs1-barcodes")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/blog/gs1-guide")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     GS1 Barcode Compliance
                   </button>
                 </li>
@@ -5661,7 +5695,7 @@ export default function App() {
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => setActiveDropdown("pricing")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left flex items-center gap-1.5 text-emerald-400 font-bold">
+                  <button onClick={() => navigate("/pricing")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left flex items-center gap-1.5 text-emerald-400 font-bold">
                     <span>💳</span> Pricing & Free Commercial Plans
                   </button>
                 </li>
@@ -5673,27 +5707,27 @@ export default function App() {
               <h4 className="text-xs font-extrabold uppercase tracking-widest text-blue-400">Company & Support</h4>
               <ul className="space-y-2 text-xs font-medium text-slate-400">
                 <li>
-                  <button onClick={() => setActiveDropdown("about")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/about-us")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     About Us
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => setActiveDropdown("author")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/author")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     👨‍💻 Author Profile
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => setActiveDropdown("contact")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/contact-us")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     Contact Support
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => setActiveDropdown("reviews")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/feedback")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     ⭐ User Feedback & Reviews
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => setActiveDropdown("sitemap")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/sitemap")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     🗺️ HTML Sitemap
                   </button>
                 </li>
@@ -5705,27 +5739,27 @@ export default function App() {
               <h4 className="text-xs font-extrabold uppercase tracking-widest text-blue-400">Legal & Governance</h4>
               <ul className="space-y-2 text-xs font-medium text-slate-400">
                 <li>
-                  <button onClick={() => setActiveDropdown("privacy")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/privacy-policy")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     Privacy Policy
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => setActiveDropdown("terms")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/terms-of-service")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     Terms of Service
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => setActiveDropdown("editorial")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/editorial-policy")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     Editorial Policy
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => setActiveDropdown("cookies")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/cookies-policy")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     Cookies Policy
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => setActiveDropdown("disclaimer")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                  <button onClick={() => navigate("/disclaimer")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
                     Print Disclaimer
                   </button>
                 </li>
