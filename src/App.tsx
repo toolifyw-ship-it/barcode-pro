@@ -90,6 +90,118 @@ const REAL_DATA: Record<string, { title: string; content: string }> = {
   }
 };
 
+// Modulo-10 Checksum Calculation Helpers for GS1 Standard Retail Barcodes (EAN-13, UPC-A, EAN-8)
+export function calculateEan13Checksum(first12Digits: string): string {
+  const digits = first12Digits.replace(/\D/g, "").slice(0, 12).padStart(12, "0");
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    const d = parseInt(digits[i], 10);
+    sum += i % 2 === 0 ? d * 1 : d * 3;
+  }
+  const check = (10 - (sum % 10)) % 10;
+  return `${digits}${check}`;
+}
+
+export function calculateUpcAChecksum(first11Digits: string): string {
+  const digits = first11Digits.replace(/\D/g, "").slice(0, 11).padStart(11, "0");
+  let sum = 0;
+  for (let i = 0; i < 11; i++) {
+    const d = parseInt(digits[i], 10);
+    sum += i % 2 === 0 ? d * 3 : d * 1;
+  }
+  const check = (10 - (sum % 10)) % 10;
+  return `${digits}${check}`;
+}
+
+export function calculateEan8Checksum(first7Digits: string): string {
+  const digits = first7Digits.replace(/\D/g, "").slice(0, 7).padStart(7, "0");
+  let sum = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = parseInt(digits[i], 10);
+    sum += i % 2 === 0 ? d * 3 : d * 1;
+  }
+  const check = (10 - (sum % 10)) % 10;
+  return `${digits}${check}`;
+}
+
+export function parseRangeCodeString(code: string): { prefix: string; num: number; padding: number; suffix: string } {
+  const match = code.match(/^(.*?)(\d+)(.*?)$/);
+  if (match) {
+    const prefix = match[1];
+    const numStr = match[2];
+    const suffix = match[3];
+    const num = parseInt(numStr, 10);
+    return {
+      prefix,
+      num: isNaN(num) ? 1 : num,
+      padding: numStr.length,
+      suffix
+    };
+  }
+  return { prefix: code, num: 1, padding: 0, suffix: "" };
+}
+
+export function generateSequentialBarcodeList(
+  prefix: string,
+  startNum: number,
+  count: number,
+  step: number,
+  padding: number,
+  suffix: string,
+  format: string
+): string[] {
+  const clampedCount = Math.min(Math.max(1, count), 300);
+  const effectiveStep = Math.max(1, step || 1);
+  const list: string[] = [];
+
+  for (let i = 0; i < clampedCount; i++) {
+    const num = startNum + i * effectiveStep;
+    if (format === "EAN13") {
+      const numStr = String(num);
+      const cleanPrefix = prefix.replace(/\D/g, "");
+      let raw12 = (cleanPrefix + numStr).slice(-12);
+      if (raw12.length < 12) {
+        raw12 = raw12.padStart(12, "0");
+        if (raw12.startsWith("000")) {
+          raw12 = "890" + raw12.slice(3);
+        }
+      }
+      list.push(calculateEan13Checksum(raw12));
+    } else if (format === "UPC") {
+      const numStr = String(num);
+      const cleanPrefix = prefix.replace(/\D/g, "");
+      let raw11 = (cleanPrefix + numStr).slice(-11);
+      if (raw11.length < 11) {
+        raw11 = raw11.padStart(11, "0");
+        if (raw11.startsWith("00")) {
+          raw11 = "01" + raw11.slice(2);
+        }
+      }
+      list.push(calculateUpcAChecksum(raw11));
+    } else if (format === "EAN8") {
+      const numStr = String(num);
+      const cleanPrefix = prefix.replace(/\D/g, "");
+      let raw7 = (cleanPrefix + numStr).slice(-7);
+      if (raw7.length < 7) {
+        raw7 = raw7.padStart(7, "0");
+        if (raw7.startsWith("00")) {
+          raw7 = "55" + raw7.slice(2);
+        }
+      }
+      list.push(calculateEan8Checksum(raw7));
+    } else if (format === "ISBN") {
+      const numStr = String(num);
+      const base9 = numStr.padStart(9, "0").slice(-9);
+      list.push(calculateEan13Checksum(`978${base9}`));
+    } else {
+      const padded = padding > 0 ? String(num).padStart(padding, "0") : String(num);
+      list.push(`${prefix}${padded}${suffix}`);
+    }
+  }
+
+  return list;
+}
+
 interface BulkItemProps {
   key?: string;
   data: string;
@@ -324,6 +436,7 @@ export default function App() {
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   // --- BULK BATCH GENERATOR STATES ---
+  const [bulkInputMode, setBulkInputMode] = useState<"range" | "manual">("range");
   const [bulkInputText, setBulkInputText] = useState<string>("PROD_A01\nPROD_A02\nPROD_A03\n102856\n102857");
   const [bulkFormat, setBulkFormat] = useState<string>("CODE128");
   const [isBulkTypeModalOpen, setIsBulkTypeModalOpen] = useState<boolean>(false);
@@ -334,6 +447,23 @@ export default function App() {
   const [bulkScaleFactor, setBulkScaleFactor] = useState<number>(2);
   const [bulkDisplayValue, setBulkDisplayValue] = useState<boolean>(true);
   const [bulkCustomPrefix, setBulkCustomPrefix] = useState<string>("");
+
+  // Sequential Range (Start to Last) states
+  const [rangeStartCode, setRangeStartCode] = useState<string>("PROD-0001");
+  const [rangeLastCode, setRangeLastCode] = useState<string>("PROD-0100");
+  const [rangeCount, setRangeCount] = useState<number>(100);
+  const [rangePrefix, setRangePrefix] = useState<string>("PROD-");
+  const [rangeStartNum, setRangeStartNum] = useState<number>(1);
+  const [rangePadding, setRangePadding] = useState<number>(4);
+  const [rangeStep, setRangeStep] = useState<number>(1);
+  const [rangeSuffix, setRangeSuffix] = useState<string>("");
+  const [isAdvancedRangeOpen, setIsAdvancedRangeOpen] = useState<boolean>(false);
+
+  // Pagination & filter for batch viewing
+  const [bulkPage, setBulkPage] = useState<number>(1);
+  const [bulkPerPage, setBulkPerPage] = useState<number>(40);
+  const [bulkFilterQuery, setBulkFilterQuery] = useState<string>("");
+  const [zipProgress, setZipProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Sync format pre-selection from indexable paths
   useEffect(() => {
@@ -2128,6 +2258,153 @@ export default function App() {
   };
 
   // --- BULK BATCH GENERATOR LOGIC ---
+  const handleRangeStartChange = (val: string) => {
+    setRangeStartCode(val);
+    const parsed = parseRangeCodeString(val);
+    setRangePrefix(parsed.prefix);
+    setRangeStartNum(parsed.num);
+    setRangePadding(parsed.padding);
+    setRangeSuffix(parsed.suffix);
+    const endNum = parsed.num + (rangeCount - 1) * Math.max(1, rangeStep);
+    const padded = parsed.padding > 0 ? String(endNum).padStart(parsed.padding, "0") : String(endNum);
+    setRangeLastCode(`${parsed.prefix}${padded}${parsed.suffix}`);
+  };
+
+  const handleRangeLastChange = (val: string) => {
+    setRangeLastCode(val);
+    const parsed = parseRangeCodeString(val);
+    if (parsed.num >= rangeStartNum) {
+      const computed = Math.min(250, Math.floor((parsed.num - rangeStartNum) / Math.max(1, rangeStep)) + 1);
+      setRangeCount(Math.max(1, computed));
+    }
+  };
+
+  const handleSetRangeCount = (count: number) => {
+    const clamped = Math.min(Math.max(1, count), 250);
+    setRangeCount(clamped);
+    const endNum = rangeStartNum + (clamped - 1) * Math.max(1, rangeStep);
+    const padded = rangePadding > 0 ? String(endNum).padStart(rangePadding, "0") : String(endNum);
+    setRangeLastCode(`${rangePrefix}${padded}${rangeSuffix}`);
+  };
+
+  const handleApplyPreset = (presetKey: string) => {
+    if (presetKey === "sku") {
+      setBulkFormat("CODE128");
+      setRangePrefix("PROD-");
+      setRangeStartNum(1);
+      setRangePadding(4);
+      setRangeSuffix("");
+      setRangeStep(1);
+      setRangeCount(100);
+      setRangeStartCode("PROD-0001");
+      setRangeLastCode("PROD-0100");
+      showToast("⚡ Applied Product SKU (Code 128) preset for 100 codes!");
+    } else if (presetKey === "ean13") {
+      setBulkFormat("EAN13");
+      setRangePrefix("");
+      setRangeStartNum(1);
+      setRangePadding(12);
+      setRangeSuffix("");
+      setRangeStep(1);
+      setRangeCount(100);
+      setRangeStartCode("890123456001");
+      setRangeLastCode("890123456100");
+      showToast("⚡ Applied Retail Goods (EAN-13) preset with GS1 Modulo-10 checksum!");
+    } else if (presetKey === "upc") {
+      setBulkFormat("UPC");
+      setRangePrefix("");
+      setRangeStartNum(1);
+      setRangePadding(11);
+      setRangeSuffix("");
+      setRangeStep(1);
+      setRangeCount(100);
+      setRangeStartCode("012345678001");
+      setRangeLastCode("012345678100");
+      showToast("⚡ Applied US Retail (UPC-A) preset with Modulo-10 checksum!");
+    } else if (presetKey === "code39") {
+      setBulkFormat("CODE39");
+      setRangePrefix("SKU-");
+      setRangeStartNum(1001);
+      setRangePadding(4);
+      setRangeSuffix("");
+      setRangeStep(1);
+      setRangeCount(100);
+      setRangeStartCode("SKU-1001");
+      setRangeLastCode("SKU-1100");
+      showToast("⚡ Applied Logistics (Code 39) preset!");
+    } else if (presetKey === "qr") {
+      setBulkFormat("QR");
+      setRangePrefix("https://mybrand.com/p/");
+      setRangeStartNum(1);
+      setRangePadding(4);
+      setRangeSuffix("");
+      setRangeStep(1);
+      setRangeCount(100);
+      setRangeStartCode("https://mybrand.com/p/0001");
+      setRangeLastCode("https://mybrand.com/p/0100");
+      showToast("⚡ Applied QR Code URL preset!");
+    } else if (presetKey === "numeric") {
+      setBulkFormat("CODE128");
+      setRangePrefix("");
+      setRangeStartNum(100001);
+      setRangePadding(6);
+      setRangeSuffix("");
+      setRangeStep(1);
+      setRangeCount(100);
+      setRangeStartCode("100001");
+      setRangeLastCode("100100");
+      showToast("⚡ Applied Numeric Serial Number preset!");
+    }
+  };
+
+  const handleGenerateSequentialBulk = (overrideCount?: number) => {
+    const targetCount = Math.min(Math.max(1, overrideCount || rangeCount), 250);
+    setIsGeneratingBulk(true);
+    showToast(`⚙️ Generating ${targetCount} sequential barcodes for ${bulkFormat}...`);
+
+    setTimeout(() => {
+      const items = generateSequentialBarcodeList(
+        rangePrefix,
+        rangeStartNum,
+        targetCount,
+        rangeStep,
+        rangePadding,
+        rangeSuffix,
+        bulkFormat
+      );
+
+      const generated = items.map((item, idx) => {
+        const detectedType = bulkAutoDetect ? (detectBarcodeType(item) || bulkFormat) : bulkFormat;
+        return {
+          id: `${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 5)}`,
+          data: item,
+          type: detectedType,
+          dataUrl: ""
+        };
+      });
+
+      setBulkCodes(generated);
+      setBulkPage(1);
+      setIsGeneratingBulk(false);
+      showToast(`✅ Generated ${generated.length} sequential barcodes for ${bulkFormat}!`);
+    }, 200);
+  };
+
+  const handleSyncRangeToManualText = () => {
+    const items = generateSequentialBarcodeList(
+      rangePrefix,
+      rangeStartNum,
+      rangeCount,
+      rangeStep,
+      rangePadding,
+      rangeSuffix,
+      bulkFormat
+    );
+    setBulkInputText(items.join("\n"));
+    setBulkInputMode("manual");
+    showToast(`📋 Loaded ${items.length} sequential items into manual editor!`);
+  };
+
   const handleGenerateBulk = () => {
     if (!bulkInputText.trim()) {
       showToast("❌ Please write some items first.");
@@ -2137,16 +2414,41 @@ export default function App() {
     showToast("⚙️ Generating bulk package...");
 
     setTimeout(() => {
-      const items = bulkInputText
-        .split(/[\n,]+/)
-        .map(x => x.trim())
-        .filter(x => x.length > 0);
+      const rawLines = bulkInputText.split(/[\n,]+/);
+      const parsedItems: string[] = [];
 
-      if (items.length > 50) {
-        showToast("⚠️ Limit is 50 barcodes per batch.");
+      for (const line of rawLines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Check if line contains a range syntax like "1..100" or "PROD-001..PROD-100" or "1001 to 1100"
+        const rangeMatch = trimmed.match(/^(.*?)(\d+)\s*(?:\.\.|\s+to\s+)\s*(.*?)(\d+)$/i);
+        if (rangeMatch) {
+          const prefixA = rangeMatch[1];
+          const numA = parseInt(rangeMatch[2], 10);
+          const prefixB = rangeMatch[3] || prefixA;
+          const numB = parseInt(rangeMatch[4], 10);
+          const pad = rangeMatch[2].length;
+          const start = Math.min(numA, numB);
+          const end = Math.max(numA, numB);
+          const count = Math.min(250, end - start + 1);
+          for (let k = 0; k < count; k++) {
+            const currentNum = start + k;
+            const padded = pad > 0 ? String(currentNum).padStart(pad, "0") : String(currentNum);
+            parsedItems.push(`${prefixA}${padded}`);
+            if (parsedItems.length >= 250) break;
+          }
+        } else {
+          parsedItems.push(trimmed);
+        }
+        if (parsedItems.length >= 250) break;
       }
 
-      const truncatedItems = items.slice(0, 50);
+      if (parsedItems.length > 250) {
+        showToast("⚠️ Limit is 250 barcodes per batch.");
+      }
+
+      const truncatedItems = parsedItems.slice(0, 250);
       const generated = truncatedItems.map((item, idx) => {
         const detectedType = bulkAutoDetect ? (detectBarcodeType(item) || bulkFormat) : bulkFormat;
         return {
@@ -2158,9 +2460,10 @@ export default function App() {
       });
 
       setBulkCodes(generated);
+      setBulkPage(1);
       setIsGeneratingBulk(false);
       showToast(`✅ Generated ${generated.length} barcodes${bulkAutoDetect ? " with auto-detected formats" : ""}!`);
-    }, 300);
+    }, 250);
   };
 
   const downloadBulkItem = (data: string, type: string) => {
@@ -2268,7 +2571,8 @@ export default function App() {
 
   const handleDownloadAllAsZip = async () => {
     if (bulkCodes.length === 0) return;
-    showToast("📦 Packaging all barcodes into ZIP archive...");
+    showToast(`📦 Packaging ${bulkCodes.length} barcodes into ZIP archive...`);
+    setZipProgress({ current: 0, total: bulkCodes.length });
     try {
       const zip = new JSZip();
       const folder = zip.folder("BarcoderPro_Barcodes") || zip;
@@ -2276,6 +2580,10 @@ export default function App() {
 
       for (let i = 0; i < bulkCodes.length; i++) {
         const code = bulkCodes[i];
+        setZipProgress({ current: i + 1, total: bulkCodes.length });
+        if (i % 15 === 0) {
+          await new Promise((r) => setTimeout(r, 0));
+        }
         const tempCanvas = document.createElement("canvas");
         let dataUrl = "";
 
@@ -2344,12 +2652,13 @@ export default function App() {
         if (dataUrl) {
           const base64Data = dataUrl.replace(/^data:image\/png;base64,/, "");
           const sanitizedFilename = code.data.slice(0, 20).replace(/[^a-zA-Z0-9_-]/g, "_") || `item_${i + 1}`;
-          const filename = `${prefix}${String(i + 1).padStart(2, "0")}_${code.type}_${sanitizedFilename}.png`;
+          const filename = `${prefix}${String(i + 1).padStart(3, "0")}_${code.type}_${sanitizedFilename}.png`;
           folder.file(filename, base64Data, { base64: true });
         }
       }
 
       const content = await zip.generateAsync({ type: "blob" });
+      setZipProgress(null);
       const url = URL.createObjectURL(content);
       const a = document.createElement("a");
       a.href = url;
@@ -2358,9 +2667,10 @@ export default function App() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast("✅ Downloaded ZIP archive with all barcodes!");
+      showToast(`✅ Downloaded ZIP archive with all ${bulkCodes.length} barcodes!`);
     } catch (err) {
       console.error("ZIP creation error:", err);
+      setZipProgress(null);
       showToast("❌ ZIP creation failed, falling back to individual downloads");
       handleDownloadAllBulk();
     }
@@ -2781,6 +3091,40 @@ export default function App() {
 
   // 2. BULK BATCH GENERATOR VIEW
   const renderBulkGeneratorPage = () => {
+    const filteredCodes = bulkCodes.filter((c) =>
+      c.data.toLowerCase().includes(bulkFilterQuery.toLowerCase())
+    );
+    const effectivePerPage = bulkPerPage === 0 ? filteredCodes.length : bulkPerPage;
+    const totalPages = Math.max(1, Math.ceil(filteredCodes.length / (effectivePerPage || 40)));
+    const displayedCodes =
+      bulkPerPage === 0
+        ? filteredCodes
+        : filteredCodes.slice((bulkPage - 1) * effectivePerPage, bulkPage * effectivePerPage);
+
+    const previewSamples = generateSequentialBarcodeList(
+      rangePrefix,
+      rangeStartNum,
+      Math.min(rangeCount, 3),
+      rangeStep,
+      rangePadding,
+      rangeSuffix,
+      bulkFormat
+    );
+    const lastPreviewSample =
+      rangeCount > 3
+        ? generateSequentialBarcodeList(
+            rangePrefix,
+            rangeStartNum + (rangeCount - 1) * Math.max(1, rangeStep),
+            1,
+            rangeStep,
+            rangePadding,
+            rangeSuffix,
+            bulkFormat
+          )[0]
+        : null;
+
+    const isRetailFormat = ["EAN13", "UPC", "EAN8", "ISBN"].includes(bulkFormat);
+
     return (
       <div className="space-y-8 animate-fade">
         <div className="text-center mb-6">
@@ -2790,8 +3134,8 @@ export default function App() {
           <h2 className={`text-2xl sm:text-3xl font-extrabold mt-2 ${isDarkMode ? "text-white" : "text-slate-900"}`}>
             📦 Multi-Format Bulk Barcode Batch Creator
           </h2>
-          <p className={`text-xs sm:text-sm mt-3 max-w-xl mx-auto ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
-            Generate up to 50 barcodes concurrently! Type or paste your data entries line-by-line, select your format, and dump high-resolution exports instantly.
+          <p className={`text-xs sm:text-sm mt-3 max-w-2xl mx-auto ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+            Generate up to 250 barcodes in 1-click! Use our <strong>Sequential Range Generator</strong> (start to last) to create 100 or 200 barcodes instantly, or paste custom data. Supports all 18+ formats with auto-calculated Modulo-10 checksums and high-res ZIP export.
           </p>
         </div>
 
@@ -2799,49 +3143,511 @@ export default function App() {
         <div className={`p-5 sm:p-6 rounded-2rem border transition-all duration-300 ${
           isDarkMode ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200 shadow-sm"
         }`}>
+          {/* Mode Switcher Tabs */}
+          <div className="flex items-center justify-between border-b pb-4 mb-5 flex-wrap gap-3">
+            <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
+              <button
+                id="bulk-mode-range-tab"
+                type="button"
+                onClick={() => setBulkInputMode("range")}
+                className={`px-4 py-2 rounded-lg text-xs font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                  bulkInputMode === "range"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                    : isDarkMode ? "text-slate-400 hover:text-white" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <span>⚡</span> Sequential Range (Start to Last)
+                <span className="ml-1 px-1.5 py-0.2 bg-emerald-500 text-white rounded-full text-[9px] font-bold">
+                  100-200 1-Click
+                </span>
+              </button>
+              <button
+                id="bulk-mode-manual-tab"
+                type="button"
+                onClick={() => setBulkInputMode("manual")}
+                className={`px-4 py-2 rounded-lg text-xs font-extrabold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                  bulkInputMode === "manual"
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                    : isDarkMode ? "text-slate-400 hover:text-white" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <span>📝</span> Custom Text / Paste List
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsBulkSettingsModalOpen(true)}
+                className="text-xs font-bold text-blue-500 hover:text-blue-400 uppercase tracking-wider flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-500/20 hover:bg-blue-500/10 cursor-pointer transition-colors"
+                title="Configure Bulk Generator settings"
+              >
+                <span>⚙️</span> Batch Settings
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-            
-            {/* Input area text block */}
+            {/* Main configuration column */}
             <div className="md:col-span-8 space-y-4">
-              <div>
-                <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
-                  isDarkMode ? "text-slate-350" : "text-slate-650"
-                }`}>
-                  Step 1: Write text data entries (one code per line, or comma-separated)
-                </label>
-                <textarea
-                  value={bulkInputText}
-                  onChange={(e) => setBulkInputText(e.target.value)}
-                  className={`w-full h-40 p-4 rounded-xl border text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono leading-relaxed resize-y ${
-                    isDarkMode ? "bg-slate-950 border-slate-850 text-white" : "bg-slate-50 border-slate-200 text-slate-800"
-                  }`}
-                  placeholder="PROD-001&#10;PROD-002&#10;PROD-003&#10;8901234567890"
-                ></textarea>
-                <p className={`text-[9px] mt-1 ${isDarkMode ? "text-slate-500" : "text-slate-500 font-medium"}`}>
-                  Maximum capacity: 50 codes per submission batch. Ensure your inputs conform to format regulations (e.g., EAN requires 12 or 13 numeric decimals).
-                </p>
-              </div>
+              {bulkInputMode === "range" ? (
+                <div className="space-y-4 animate-fade">
+                  {/* Quick Preset Templates */}
+                  <div>
+                    <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${
+                      isDarkMode ? "text-slate-400" : "text-slate-600"
+                    }`}>
+                      ⚡ 1-Click Quick Presets (Auto-sets Format & Sequence)
+                    </label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset("sku")}
+                        className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
+                          bulkFormat === "CODE128" && rangePrefix === "PROD-"
+                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                            : isDarkMode ? "bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700" : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>📦</span> SKU (Code 128)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset("ean13")}
+                        className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
+                          bulkFormat === "EAN13"
+                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                            : isDarkMode ? "bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700" : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>🛒</span> Retail (EAN-13 Checksum)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset("upc")}
+                        className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
+                          bulkFormat === "UPC"
+                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                            : isDarkMode ? "bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700" : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>🏷️</span> US Retail (UPC-A)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset("code39")}
+                        className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
+                          bulkFormat === "CODE39"
+                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                            : isDarkMode ? "bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700" : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>🏭</span> Logistics (Code 39)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset("qr")}
+                        className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
+                          bulkFormat === "QR"
+                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                            : isDarkMode ? "bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700" : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>📱</span> QR URLs
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPreset("numeric")}
+                        className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
+                          rangePrefix === "" && rangeStartNum === 100001
+                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                            : isDarkMode ? "bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700" : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span>🔢</span> Numeric Serial
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Start to Last Input Fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
+                        isDarkMode ? "text-slate-300" : "text-slate-700"
+                      }`}>
+                        Start Barcode / Code <span className="text-blue-500">*</span>
+                      </label>
+                      <input
+                        id="bulk-range-start-input"
+                        type="text"
+                        value={rangeStartCode}
+                        onChange={(e) => handleRangeStartChange(e.target.value)}
+                        placeholder="e.g. PROD-0001 or 890123456001"
+                        className={`w-full px-4 py-2.5 rounded-xl border font-mono text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                          isDarkMode ? "bg-slate-950 border-slate-800 text-white" : "bg-slate-50 border-slate-200 text-slate-900"
+                        }`}
+                      />
+                      <p className={`text-[9px] mt-1 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                        Initial serial prefix & number (e.g., PROD-0001 or 1001)
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
+                        isDarkMode ? "text-slate-300" : "text-slate-700"
+                      }`}>
+                        Last Barcode / End Code
+                      </label>
+                      <input
+                        id="bulk-range-last-input"
+                        type="text"
+                        value={rangeLastCode}
+                        onChange={(e) => handleRangeLastChange(e.target.value)}
+                        placeholder="e.g. PROD-0100 or PROD-0200"
+                        className={`w-full px-4 py-2.5 rounded-xl border font-mono text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                          isDarkMode ? "bg-slate-950 border-slate-800 text-white" : "bg-slate-50 border-slate-200 text-slate-900"
+                        }`}
+                      />
+                      <p className={`text-[9px] mt-1 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                        Ending serial code (auto-updates quantity count)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Quantity Count Selector & Quick Count Presets */}
+                  <div className={`p-4 rounded-xl border ${
+                    isDarkMode ? "bg-slate-950/60 border-slate-800/80" : "bg-blue-50/40 border-blue-100"
+                  }`}>
+                    <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
+                      <label className={`text-[10px] font-bold uppercase tracking-wider ${
+                        isDarkMode ? "text-slate-300" : "text-slate-700"
+                      }`}>
+                        Total Codes To Generate (1 to 250):
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleSetRangeCount(50)}
+                          className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                            rangeCount === 50
+                              ? "bg-blue-600 text-white"
+                              : isDarkMode ? "bg-slate-800 text-slate-300 hover:bg-slate-700" : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                          }`}
+                        >
+                          50 Codes
+                        </button>
+                        <button
+                          id="bulk-range-100-btn"
+                          type="button"
+                          onClick={() => handleSetRangeCount(100)}
+                          className={`px-3 py-1 rounded-md text-[10px] font-black transition-all cursor-pointer shadow-xs ${
+                            rangeCount === 100
+                              ? "bg-blue-600 text-white ring-2 ring-blue-400"
+                              : isDarkMode ? "bg-slate-800 text-emerald-400 hover:bg-slate-700 font-bold" : "bg-white text-blue-600 hover:bg-slate-100 border border-blue-300"
+                          }`}
+                        >
+                          ⚡ 100 Codes
+                        </button>
+                        <button
+                          id="bulk-range-200-btn"
+                          type="button"
+                          onClick={() => handleSetRangeCount(200)}
+                          className={`px-3 py-1 rounded-md text-[10px] font-black transition-all cursor-pointer shadow-xs ${
+                            rangeCount === 200
+                              ? "bg-blue-600 text-white ring-2 ring-blue-400"
+                              : isDarkMode ? "bg-slate-800 text-amber-400 hover:bg-slate-700 font-bold" : "bg-white text-purple-600 hover:bg-slate-100 border border-purple-300"
+                          }`}
+                        >
+                          🚀 200 Codes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetRangeCount(250)}
+                          className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                            rangeCount === 250
+                              ? "bg-blue-600 text-white"
+                              : isDarkMode ? "bg-slate-800 text-slate-300 hover:bg-slate-700" : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                          }`}
+                        >
+                          🔥 250 Max
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        id="bulk-range-count-input"
+                        type="range"
+                        min="1"
+                        max="250"
+                        value={rangeCount}
+                        onChange={(e) => handleSetRangeCount(parseInt(e.target.value, 10) || 1)}
+                        className="flex-1 accent-blue-600 cursor-pointer h-2"
+                      />
+                      <input
+                        type="number"
+                        min="1"
+                        max="250"
+                        value={rangeCount}
+                        onChange={(e) => handleSetRangeCount(parseInt(e.target.value, 10) || 1)}
+                        className={`w-18 px-2 py-1 text-center font-bold text-xs rounded-lg border outline-none font-mono ${
+                          isDarkMode ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-900"
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Advanced fine-tuning toggle */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAdvancedRangeOpen(!isAdvancedRangeOpen)}
+                      className="text-[11px] font-bold text-blue-500 hover:text-blue-400 flex items-center gap-1 cursor-pointer transition-colors select-none"
+                    >
+                      <span>{isAdvancedRangeOpen ? "▲ Hide" : "▼ Show"} Fine-Tuning Options</span>
+                      <span className={`text-[9px] ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                        (Prefix, Suffix, Padding, Step)
+                      </span>
+                    </button>
+
+                    {isAdvancedRangeOpen && (
+                      <div className={`mt-3 p-4 rounded-xl border grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fade ${
+                        isDarkMode ? "bg-slate-950 border-slate-850" : "bg-slate-50 border-slate-200"
+                      }`}>
+                        <div>
+                          <label className={`block text-[9px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+                            Prefix
+                          </label>
+                          <input
+                            type="text"
+                            value={rangePrefix}
+                            onChange={(e) => {
+                              setRangePrefix(e.target.value);
+                              const endNum = rangeStartNum + (rangeCount - 1) * Math.max(1, rangeStep);
+                              const padded = rangePadding > 0 ? String(endNum).padStart(rangePadding, "0") : String(endNum);
+                              setRangeStartCode(`${e.target.value}${String(rangeStartNum).padStart(rangePadding, "0")}${rangeSuffix}`);
+                              setRangeLastCode(`${e.target.value}${padded}${rangeSuffix}`);
+                            }}
+                            placeholder="e.g. PROD-"
+                            className={`w-full px-2 py-1.5 text-xs font-mono rounded-lg border outline-none ${
+                              isDarkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-300 text-slate-800"
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className={`block text-[9px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+                            Suffix
+                          </label>
+                          <input
+                            type="text"
+                            value={rangeSuffix}
+                            onChange={(e) => {
+                              setRangeSuffix(e.target.value);
+                              const endNum = rangeStartNum + (rangeCount - 1) * Math.max(1, rangeStep);
+                              const padded = rangePadding > 0 ? String(endNum).padStart(rangePadding, "0") : String(endNum);
+                              setRangeStartCode(`${rangePrefix}${String(rangeStartNum).padStart(rangePadding, "0")}${e.target.value}`);
+                              setRangeLastCode(`${rangePrefix}${padded}${e.target.value}`);
+                            }}
+                            placeholder="e.g. -A"
+                            className={`w-full px-2 py-1.5 text-xs font-mono rounded-lg border outline-none ${
+                              isDarkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-300 text-slate-800"
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className={`block text-[9px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+                            Min Digits (Padding)
+                          </label>
+                          <select
+                            value={rangePadding}
+                            onChange={(e) => {
+                              const p = parseInt(e.target.value, 10);
+                              setRangePadding(p);
+                              const endNum = rangeStartNum + (rangeCount - 1) * Math.max(1, rangeStep);
+                              const padded = p > 0 ? String(endNum).padStart(p, "0") : String(endNum);
+                              setRangeStartCode(`${rangePrefix}${String(rangeStartNum).padStart(p, "0")}${rangeSuffix}`);
+                              setRangeLastCode(`${rangePrefix}${padded}${rangeSuffix}`);
+                            }}
+                            className={`w-full px-2 py-1.5 text-xs rounded-lg border outline-none font-medium cursor-pointer ${
+                              isDarkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-300 text-slate-800"
+                            }`}
+                          >
+                            <option value="0">None (1, 2, ...)</option>
+                            <option value="2">2 Digits (01, 02)</option>
+                            <option value="3">3 Digits (001, 002)</option>
+                            <option value="4">4 Digits (0001, 0002)</option>
+                            <option value="5">5 Digits (00001)</option>
+                            <option value="6">6 Digits (000001)</option>
+                            <option value="8">8 Digits (EAN-8)</option>
+                            <option value="12">12 Digits (EAN-13/UPC)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className={`block text-[9px] font-bold uppercase tracking-wider mb-1 ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+                            Step Increment
+                          </label>
+                          <select
+                            value={rangeStep}
+                            onChange={(e) => {
+                              const s = parseInt(e.target.value, 10);
+                              setRangeStep(s);
+                              const endNum = rangeStartNum + (rangeCount - 1) * s;
+                              const padded = rangePadding > 0 ? String(endNum).padStart(rangePadding, "0") : String(endNum);
+                              setRangeLastCode(`${rangePrefix}${padded}${rangeSuffix}`);
+                            }}
+                            className={`w-full px-2 py-1.5 text-xs rounded-lg border outline-none font-medium cursor-pointer ${
+                              isDarkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-300 text-slate-800"
+                            }`}
+                          >
+                            <option value="1">+1 (Sequential)</option>
+                            <option value="2">+2 (Every 2nd)</option>
+                            <option value="5">+5</option>
+                            <option value="10">+10</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Real-time Live Sequence Preview Banner */}
+                  <div className={`p-3.5 rounded-xl border text-xs ${
+                    isDarkMode ? "bg-slate-950/80 border-slate-800" : "bg-slate-50 border-slate-200"
+                  }`}>
+                    <div className="flex items-center justify-between flex-wrap gap-1 mb-1.5">
+                      <span className="font-extrabold text-blue-500 uppercase tracking-wider text-[10px]">
+                        ✨ Sequence Preview ({rangeCount} Barcodes Total)
+                      </span>
+                      {isRetailFormat && (
+                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded-full font-bold text-[9px]">
+                          🛡️ Auto Modulo-10 Checksum Active
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-mono text-[11px] truncate text-slate-700 dark:text-slate-300">
+                      {previewSamples.join(", ")}
+                      {lastPreviewSample && ` ... ${lastPreviewSample}`}
+                    </div>
+                  </div>
+
+                  {/* Direct Action Buttons for Range */}
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
+                    <button
+                      id="bulk-range-generate-btn"
+                      type="button"
+                      onClick={() => handleGenerateSequentialBulk()}
+                      disabled={isGeneratingBulk}
+                      className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {isGeneratingBulk ? (
+                        <span>⚙️ Generating Batch...</span>
+                      ) : (
+                        <span>⚡ Generate {rangeCount} Sequential Barcodes</span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateSequentialBulk(100)}
+                      disabled={isGeneratingBulk}
+                      className="py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md active:scale-95 transition-all cursor-pointer"
+                      title="1-Click Generate exactly 100 sequential barcodes"
+                    >
+                      ⚡ 100 Now
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleGenerateSequentialBulk(200)}
+                      disabled={isGeneratingBulk}
+                      className="py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md active:scale-95 transition-all cursor-pointer"
+                      title="1-Click Generate exactly 200 sequential barcodes"
+                    >
+                      🚀 200 Now
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSyncRangeToManualText}
+                      className={`py-3 px-3.5 border rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        isDarkMode ? "bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-850" : "bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
+                      }`}
+                      title="Copy generated list into manual textarea"
+                    >
+                      📋 Copy to List
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Manual Custom Textarea Mode */
+                <div className="space-y-3 animate-fade">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className={`block text-[10px] font-bold uppercase tracking-wider ${
+                      isDarkMode ? "text-slate-350" : "text-slate-650"
+                    }`}>
+                      Type or Paste Barcode Lines (one per line, or comma-separated)
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const list = generateSequentialBarcodeList("PROD-", 1, 100, 1, 4, "", bulkFormat);
+                          setBulkInputText(list.join("\n"));
+                          showToast("⚡ Inserted 100 sample sequential codes!");
+                        }}
+                        className="text-[10px] font-bold text-blue-500 hover:underline cursor-pointer"
+                      >
+                        + Sample 100
+                      </button>
+                      <span className="text-slate-400 text-[10px]">•</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const list = generateSequentialBarcodeList("PROD-", 1, 200, 1, 4, "", bulkFormat);
+                          setBulkInputText(list.join("\n"));
+                          showToast("🚀 Inserted 200 sample sequential codes!");
+                        }}
+                        className="text-[10px] font-bold text-purple-500 hover:underline cursor-pointer"
+                      >
+                        + Sample 200
+                      </button>
+                      <span className="text-slate-400 text-[10px]">•</span>
+                      <button
+                        type="button"
+                        onClick={() => setBulkInputText("")}
+                        className="text-[10px] font-bold text-rose-500 hover:underline cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    value={bulkInputText}
+                    onChange={(e) => setBulkInputText(e.target.value)}
+                    className={`w-full h-44 p-4 rounded-xl border text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono leading-relaxed resize-y ${
+                      isDarkMode ? "bg-slate-950 border-slate-850 text-white" : "bg-slate-50 border-slate-200 text-slate-800"
+                    }`}
+                    placeholder="PROD-0001&#10;PROD-0002&#10;PROD-0003&#10;or write range like: 1..200"
+                  ></textarea>
+                  <p className={`text-[9px] ${isDarkMode ? "text-slate-500" : "text-slate-500 font-medium"}`}>
+                    💡 Tip: You can type range syntax like <code className="font-bold">1..200</code> or <code className="font-bold">PROD-001..PROD-200</code> to auto-expand up to 250 codes!
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Quick configurations sidebar element */}
             <div className="md:col-span-4 space-y-4">
               <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className={`block text-[10px] font-bold uppercase tracking-wider ${
-                    isDarkMode ? "text-slate-350" : "text-slate-650"
-                  }`}>
-                    Step 2: Symbology Format
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsBulkSettingsModalOpen(true)}
-                    className="text-[10px] font-extrabold text-blue-500 hover:text-blue-400 uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-colors"
-                    title="Configure Bulk Generator settings"
-                  >
-                    <span>⚙️</span> Batch Settings
-                  </button>
-                </div>
-                <button 
+                <label className={`block text-[10px] font-bold uppercase tracking-wider mb-1.5 ${
+                  isDarkMode ? "text-slate-350" : "text-slate-650"
+                }`}>
+                  Symbology Format (18+ Standard Types)
+                </label>
+                <button
+                  id="bulk-format-selector-btn"
                   type="button"
                   onClick={() => setIsBulkTypeModalOpen(true)}
                   className={`w-full border rounded-xl px-3.5 py-3 text-left flex justify-between items-center transition-all cursor-pointer duration-300 ${
@@ -2851,20 +3657,51 @@ export default function App() {
                   }`}
                   aria-label="Select bulk barcode type" 
                 >
-                    <span className="font-bold text-xs uppercase">{BARCODE_TYPES.find(t => t.id === bulkFormat)?.name || bulkFormat}</span>
-                    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path>
-                    </svg>
+                  <div>
+                    <span className="font-bold text-xs uppercase block">
+                      {BARCODE_TYPES.find((t) => t.id === bulkFormat)?.name || bulkFormat}
+                    </span>
+                    <span className={`text-[9px] ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                      {["QR", "PDF417", "DATAMATRIX", "AZTEC"].includes(bulkFormat) ? "2D Matrix Symbology" : "1D Linear Symbology"}
+                    </span>
+                  </div>
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19 9l-7 7-7-7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path>
+                  </svg>
                 </button>
+              </div>
+
+              {/* Format Information Card */}
+              <div className={`p-3.5 rounded-xl border text-[10px] space-y-1 ${
+                isDarkMode ? "bg-slate-950/60 border-slate-850 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"
+              }`}>
+                <p className="font-bold text-blue-500 uppercase tracking-wide">
+                  Active Symbology Specs:
+                </p>
+                <p>
+                  Format: <span className="font-bold text-slate-900 dark:text-white">{bulkFormat}</span>
+                </p>
+                <p>
+                  Export Resolution: <span className="font-bold text-slate-900 dark:text-white">{bulkScaleFactor}x Density PNG</span>
+                </p>
+                <p>
+                  Text Labels: <span className="font-bold text-slate-900 dark:text-white">{bulkDisplayValue ? "Enabled" : "Hidden"}</span>
+                </p>
               </div>
 
               <div className="pt-2">
                 <button
-                  onClick={handleGenerateBulk}
+                  id="bulk-convert-btn"
+                  type="button"
+                  onClick={bulkInputMode === "range" ? () => handleGenerateSequentialBulk() : handleGenerateBulk}
                   disabled={isGeneratingBulk}
-                  className={`w-full font-bold cursor-pointer transition-all duration-300 transform active:scale-95 text-xs uppercase tracking-wider py-3 px-4 rounded-xl flex items-center justify-center gap-2 text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20`}
+                  className="w-full font-bold cursor-pointer transition-all duration-300 transform active:scale-95 text-xs uppercase tracking-wider py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20"
                 >
-                  {isGeneratingBulk ? "Generating..." : "🚀 Convert to Batch Cards"}
+                  {isGeneratingBulk ? (
+                    <span>⚙️ Rendering Cards...</span>
+                  ) : (
+                    <span>🚀 Convert to Batch Cards ({bulkInputMode === "range" ? rangeCount : "Custom"})</span>
+                  )}
                 </button>
               </div>
             </div>
@@ -2875,12 +3712,22 @@ export default function App() {
         {/* Visual outputs grid cards wrapper */}
         {bulkCodes.length > 0 && (
           <div className="space-y-4 animate-fade md:pt-4">
+            {/* Status & Action Bar */}
             <div className="flex justify-between items-center bg-blue-600/10 px-4 py-3 rounded-xl border border-blue-500/20 flex-wrap gap-2">
-              <span className="text-xs font-bold text-blue-500">
-                ✅ Batch containing {bulkCodes.length} rendering cards loaded successfully!
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-blue-500">
+                  ✅ Batch containing {bulkCodes.length} rendering cards loaded successfully!
+                </span>
+                {zipProgress && (
+                  <span className="text-[10px] px-2.5 py-0.5 bg-blue-600 text-white rounded-full font-bold animate-pulse">
+                    Packaging {zipProgress.current} / {zipProgress.total} into ZIP...
+                  </span>
+                )}
+              </div>
+
               <div className="flex items-center gap-2 flex-wrap">
                 <button
+                  id="bulk-export-csv-btn"
                   onClick={handleExportBulkCsv}
                   className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold uppercase rounded-lg cursor-pointer shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
                   title="Export input data, symbology types, and generated file names as a CSV spreadsheet"
@@ -2888,25 +3735,121 @@ export default function App() {
                   <span>📊</span> Export as CSV
                 </button>
                 <button
+                  id="bulk-download-zip-btn"
                   onClick={handleDownloadAllAsZip}
                   className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase rounded-lg cursor-pointer shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
                   title="Download all generated PNG barcodes packaged in a single ZIP file"
                 >
-                  <span>📦</span> Download All as ZIP
+                  <span>📦</span> Download All as ZIP ({bulkCodes.length})
                 </button>
                 <button
                   onClick={handleDownloadAllBulk}
                   className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold uppercase rounded-lg cursor-pointer shadow-sm transition-colors"
                   title="Download items individually"
                 >
-                  📥 Download Individual PNGs
+                  📥 Download PNGs
+                </button>
+                <button
+                  id="bulk-clear-batch-btn"
+                  onClick={() => {
+                    setBulkCodes([]);
+                    setBulkFilterQuery("");
+                    showToast("Batch cleared");
+                  }}
+                  className="px-2.5 py-1.5 bg-rose-600/10 hover:bg-rose-600 text-rose-500 hover:text-white text-[10px] font-bold uppercase rounded-lg cursor-pointer transition-colors"
+                  title="Clear current batch"
+                >
+                  ✕ Clear
+                </button>
+              </div>
+            </div>
+
+            {/* Filter and Pagination Controls for large 100-200 batches */}
+            <div className={`p-3 rounded-xl border flex justify-between items-center flex-wrap gap-3 ${
+              isDarkMode ? "bg-slate-900/50 border-slate-800" : "bg-white border-slate-200 shadow-xs"
+            }`}>
+              <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-xs">
+                <input
+                  id="bulk-filter-input"
+                  type="text"
+                  value={bulkFilterQuery}
+                  onChange={(e) => {
+                    setBulkFilterQuery(e.target.value);
+                    setBulkPage(1);
+                  }}
+                  placeholder="🔍 Filter batch by code..."
+                  className={`w-full px-3 py-1.5 text-xs rounded-lg border outline-none font-mono ${
+                    isDarkMode ? "bg-slate-950 border-slate-800 text-white" : "bg-slate-50 border-slate-300 text-slate-800"
+                  }`}
+                />
+                {bulkFilterQuery && (
+                  <button
+                    onClick={() => setBulkFilterQuery("")}
+                    className="text-xs text-slate-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className={`text-[11px] font-bold ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
+                  Showing {filteredCodes.length === 0 ? 0 : (bulkPage - 1) * effectivePerPage + 1} -{" "}
+                  {Math.min(bulkPage * effectivePerPage, filteredCodes.length)} of {filteredCodes.length} barcodes
+                </span>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setBulkPage((p) => Math.max(1, p - 1))}
+                      disabled={bulkPage <= 1}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold cursor-pointer transition-all ${
+                        bulkPage <= 1
+                          ? "opacity-40 cursor-not-allowed"
+                          : isDarkMode ? "bg-slate-800 hover:bg-slate-700 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-800"
+                      }`}
+                    >
+                      ◀ Prev
+                    </button>
+                    <span className="px-2 font-mono font-bold text-[10px]">
+                      {bulkPage}/{totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setBulkPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={bulkPage >= totalPages}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold cursor-pointer transition-all ${
+                        bulkPage >= totalPages
+                          ? "opacity-40 cursor-not-allowed"
+                          : isDarkMode ? "bg-slate-800 hover:bg-slate-700 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-800"
+                      }`}
+                    >
+                      Next ▶
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkPerPage(bulkPerPage === 0 ? 40 : 0);
+                    setBulkPage(1);
+                  }}
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
+                    bulkPerPage === 0
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : isDarkMode ? "border-slate-700 text-slate-400 hover:text-white" : "border-slate-300 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {bulkPerPage === 0 ? "Paginate (40/page)" : `Show All (${filteredCodes.length})`}
                 </button>
               </div>
             </div>
 
             {/* Layout representation grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {bulkCodes.map((code) => (
+              {displayedCodes.map((code) => (
                 <BulkItemCard
                   key={code.id}
                   data={code.data}
@@ -2916,6 +3859,45 @@ export default function App() {
                 />
               ))}
             </div>
+
+            {/* Bottom Pagination controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkPage((p) => Math.max(1, p - 1));
+                    window.scrollTo({ top: 300, behavior: "smooth" });
+                  }}
+                  disabled={bulkPage <= 1}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                    bulkPage <= 1
+                      ? "opacity-40 cursor-not-allowed"
+                      : isDarkMode ? "bg-slate-800 hover:bg-slate-700 text-white" : "bg-slate-200 hover:bg-slate-300 text-slate-800"
+                  }`}
+                >
+                  ◀ Previous Page
+                </button>
+                <span className="text-xs font-mono font-bold px-3">
+                  Page {bulkPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkPage((p) => Math.min(totalPages, p + 1));
+                    window.scrollTo({ top: 300, behavior: "smooth" });
+                  }}
+                  disabled={bulkPage >= totalPages}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                    bulkPage >= totalPages
+                      ? "opacity-40 cursor-not-allowed"
+                      : isDarkMode ? "bg-slate-800 hover:bg-slate-700 text-white" : "bg-slate-200 hover:bg-slate-300 text-slate-800"
+                  }`}
+                >
+                  Next Page ▶
+                </button>
+              </div>
+            )}
           </div>
         )}
 
