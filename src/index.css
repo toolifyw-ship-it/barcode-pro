@@ -206,14 +206,32 @@ body {
 }
 
 @media (max-width: 480px) {
-  .barcode-canvas-wrapper,
-  #qrcode-canvas-wrapper {
-    padding: 0.65rem;
+  .barcode-canvas-wrapper {
+    padding: 0.5rem;
     border-radius: 14px;
     min-height: 140px;
     max-width: 100%;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  #qrcode-canvas-wrapper {
+    padding: 0.35rem !important; /* Optimized reduced padding for viewports below 480px */
+    border-radius: 12px;
+    min-height: 120px;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #qrcode-canvas-wrapper .qr-control-toggle,
+  #qrcode-canvas-wrapper .qr-control-reset {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
   }
 }
 

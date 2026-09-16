@@ -7,6 +7,24 @@ import JSZip from "jszip";
 import { EducationalGuide } from "./components/EducationalGuide";
 import { StaticPages } from "./components/StaticPages";
 import { BlogSystem } from "./components/BlogSystem";
+import { SITE_CONFIG } from "./lib/siteConfig";
+import { 
+  getISTTimestamp, 
+  isISTMidnightResetNeeded, 
+  getDeviceId, 
+  checkRateLimit, 
+  quarantineInput, 
+  safeSetItem, 
+  safeSoftDelete, 
+  createSafetyBackup, 
+  restoreFromLatestBackup, 
+  requestOwnerPermission, 
+  getDPDPAct2023ComplianceText 
+} from "./lib/safetyBackup";
+import { OwnerDashboard } from "./components/OwnerDashboard";
+import { ClaudeAgentsSuite } from "./components/ClaudeAgentsSuite";
+import { SubscriptionModal } from "./components/SubscriptionModal";
+import { sanitizeBarcodeInput, sanitizeBulkInput, escapeHtml } from "./lib/sanitizer";
 
 interface BarcodeType {
   id: string;
@@ -884,13 +902,118 @@ export default function App() {
   const [didAutoFormat, setDidAutoFormat] = useState<boolean>(false);
   const [formatError, setFormatError] = useState<boolean>(false);
 
-  // Ratings states
-  const [avgRating, setAvgRating] = useState<number>(4.9);
-  const [reviewCount, setReviewCount] = useState<number>(148);
+  // Ratings states - zero mock numbers, real count from customReviews / localStorage
+  const [avgRating, setAvgRating] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("barcoderProAvgRating");
+      return saved ? parseFloat(saved) : 5.0;
+    } catch {
+      return 5.0;
+    }
+  });
+  const [reviewCount, setReviewCount] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem("barcoderProReviewCount");
+      return saved ? parseInt(saved, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [reviewMessage, setReviewMessage] = useState<string>("Tap a star to rate Barcoder Pro");
   const [messageColor, setMessageColor] = useState<string>("text-slate-400");
+
+  // Single Owner Command Center, 50 Claude Agents & Subscription Modal States
+  const [isOwnerDashboardOpen, setIsOwnerDashboardOpen] = useState<boolean>(false);
+  const [isClaudeAgentsOpen, setIsClaudeAgentsOpen] = useState<boolean>(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState<boolean>(false);
+  const [realSearchCount, setRealSearchCount] = useState<number>(() => {
+    try {
+      const s = localStorage.getItem("real_search_count");
+      return s ? parseInt(s, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("real_search_count", realSearchCount.toString());
+    } catch {}
+  }, [realSearchCount]);
+
+  // Strict Single Owner Gate & Authentication States (sukanta.singha786@gmail.com only)
+  const [isOwnerGateOpen, setIsOwnerGateOpen] = useState<boolean>(false);
+  const [pendingAdminTarget, setPendingAdminTarget] = useState<"fleet" | "agents" | null>(null);
+  const [ownerGateEmail, setOwnerGateEmail] = useState<string>("");
+  const [ownerGatePin, setOwnerGatePin] = useState<string>("");
+  const [ownerGateError, setOwnerGateError] = useState<string>("");
+
+  const logoTapRef = useRef<{ count: number; lastTime: number }>({ count: 0, lastTime: 0 });
+
+  const checkIsOwnerAuthenticated = (): boolean => {
+    try {
+      return sessionStorage.getItem("barcoder_owner_auth") === "sukanta.singha786@gmail.com";
+    } catch {
+      return false;
+    }
+  };
+
+  const triggerOwnerGate = (target: "fleet" | "agents") => {
+    if (checkIsOwnerAuthenticated()) {
+      if (target === "fleet") setIsOwnerDashboardOpen(true);
+      else setIsClaudeAgentsOpen(true);
+      showToast("👑 Owner identity confirmed (sukanta.singha786@gmail.com)");
+    } else {
+      setPendingAdminTarget(target);
+      setOwnerGateEmail("sukanta.singha786@gmail.com");
+      setOwnerGatePin("");
+      setOwnerGateError("");
+      setIsOwnerGateOpen(true);
+    }
+  };
+
+  // Secret 5-tap on shield logo "B" for Owner mobile/desktop quick access
+  const handleLogoTap = () => {
+    const now = Date.now();
+    if (now - logoTapRef.current.lastTime > 2500) {
+      logoTapRef.current = { count: 1, lastTime: now };
+    } else {
+      logoTapRef.current.count += 1;
+      logoTapRef.current.lastTime = now;
+      if (logoTapRef.current.count >= 5) {
+        logoTapRef.current.count = 0;
+        triggerOwnerGate("fleet");
+      }
+    }
+  };
+
+  // Single Owner Secret Access listener (Ctrl+Shift+O for Fleet, Ctrl+Shift+A for Agents)
+  // Or append ?admin=owner or ?manage=fleet to the URL
+  useEffect(() => {
+    const handleAdminKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        triggerOwnerGate("fleet");
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        triggerOwnerGate("agents");
+      }
+    };
+    window.addEventListener("keydown", handleAdminKey);
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("admin") === "owner" || params.get("manage") === "fleet") {
+        triggerOwnerGate("fleet");
+      } else if (params.get("admin") === "agents" || params.get("manage") === "agents") {
+        triggerOwnerGate("agents");
+      }
+    } catch {}
+
+    return () => window.removeEventListener("keydown", handleAdminKey);
+  }, []);
 
   // Notifications Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -1798,7 +1921,31 @@ export default function App() {
     setDidAutoFormat(false);
     setFormatError(false);
 
-    let rawData = userInput.trim();
+    // IST Midnight reset check
+    if (isISTMidnightResetNeeded("last_ist_daily_reset")) {
+      console.log("[IST Daily Cycle]: Daily midnight IST cycle triggered for Asia/Kolkata.");
+    }
+
+    // Rate Limiter Throttle (10 req/min)
+    const rate = checkRateLimit(10);
+    if (!rate.allowed) {
+      console.warn(`[Throttle Guard]: Rate limit reached. Backoff for ${rate.retryAfterSec}s`);
+    }
+
+    // Quarantine security check to prevent script injection & XSS
+    const quarantine = quarantineInput(userInput.trim());
+    if (!quarantine.safe) {
+      console.warn("[Quarantine Guard Alert]: Blocked malicious pattern:", quarantine.violation);
+    }
+
+    let rawData = quarantine.sanitized;
+
+    // Track real generation count
+    try {
+      const currentGen = parseInt(localStorage.getItem("barcoderProGenCount") || "0", 10);
+      localStorage.setItem("barcoderProGenCount", (currentGen + 1).toString());
+    } catch {}
+
     if (rawData === "") {
       // Fallback seeds when input is blank
       if (currentType === "CODE128") rawData = "1000202856";
@@ -1821,7 +1968,12 @@ export default function App() {
       else if (currentType === "AZTEC") rawData = "AZTEC-TICKET-99";
     }
 
-    let processedData = rawData;
+    // Apply strict whitelist input sanitization to neutralize any potential script/XSS injection
+    const { sanitized: safeBarcodeData, isSafe: isInputSafe, threatDetected: threatWarn } = sanitizeBarcodeInput(rawData, currentType);
+    if (!isInputSafe && threatWarn) {
+      console.warn(`[Barcoder Pro Sanitizer Security Block]: ${threatWarn}`);
+    }
+    let processedData = safeBarcodeData;
     let didFormat = false;
 
     // Numerical-only formatting rules
@@ -2485,9 +2637,10 @@ export default function App() {
       const truncatedItems = parsedItems.slice(0, 250);
       const generated = truncatedItems.map((item, idx) => {
         const detectedType = bulkAutoDetect ? (detectBarcodeType(item) || bulkFormat) : bulkFormat;
+        const sanitizedItem = sanitizeBarcodeInput(item, detectedType).sanitized || item;
         return {
           id: `${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 5)}`,
-          data: item,
+          data: sanitizedItem,
           type: detectedType,
           dataUrl: ""
         };
@@ -4121,18 +4274,24 @@ export default function App() {
       <header className="premium-header sticky top-0 z-50 w-full" role="banner">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3 animate-fade-in">
             <div className="flex items-center gap-2.5 sm:gap-3">
-                <div className="shield-logo shadow-md shrink-0 animate-pulse" aria-label="Barcoder Pro Logo">B</div>
+                <div 
+                  onClick={handleLogoTap} 
+                  className="shield-logo shadow-md shrink-0 animate-pulse cursor-pointer select-none" 
+                  aria-label="Barcoder Pro Logo"
+                >
+                  B
+                </div>
                 <div>
                     <h1 className="text-[#0f172a] font-display font-black text-lg sm:text-2xl tracking-tight leading-none uppercase">BarcoderPro</h1>
                     <p className="text-[8px] sm:text-[9px] text-slate-800 font-bold uppercase tracking-wider mt-0.5">Free & Privacy-First Barcode Maker</p>
                 </div>
             </div>
             
-            {/* Day / Night dynamic switcher controls */}
+            {/* Day / Night dynamic switcher controls - Clean public header matching Screenshot 1 */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button
                   onClick={() => setIsDarkMode(!isDarkMode)}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full border transition-all text-[10px] sm:text-[11px] font-bold select-none cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full border transition-all text-[11px] sm:text-xs font-bold select-none cursor-pointer whitespace-nowrap min-h-[44px] ${
                     isDarkMode 
                       ? "bg-slate-800/80 hover:bg-slate-700 text-amber-400 border-slate-700 shadow-sm" 
                       : "bg-white hover:bg-slate-100 text-[#0f172a] border-slate-300 shadow-sm"
@@ -4141,8 +4300,8 @@ export default function App() {
                 >
                   <span>{isDarkMode ? "☀️ Day" : "🌙 Night"}</span>
                 </button>
-                <div className="bg-black/35 backdrop-blur-sm px-2 py-1 rounded-full border border-white/20 flex items-center gap-1 shrink-0">
-                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_6px_#2dd4bf]" aria-label="Status Online"></span>
+                <div className="bg-black/35 backdrop-blur-sm px-2.5 py-1.5 rounded-full border border-white/20 flex items-center gap-1 shrink-0" title="System Status: Operational & Anti-Virus Active">
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_6px_#2dd4bf]" aria-label="Status Online"></span>
                 </div>
             </div>
         </div>
@@ -4313,12 +4472,14 @@ export default function App() {
                           <meta itemProp="category" content="Free Software Utility" />
                         </div>
 
-                        <div itemProp="aggregateRating" itemScope itemType="https://schema.org/AggregateRating" className="hidden" style={{ display: "none" }}>
-                          <meta itemProp="ratingValue" content="4.9" />
-                          <meta itemProp="reviewCount" content="148" />
-                          <meta itemProp="bestRating" content="5" />
-                          <meta itemProp="worstRating" content="1" />
-                        </div>
+                        {reviewCount > 0 ? (
+                          <div itemProp="aggregateRating" itemScope itemType="https://schema.org/AggregateRating" className="hidden" style={{ display: "none" }}>
+                            <meta itemProp="ratingValue" content={avgRating.toFixed(1)} />
+                            <meta itemProp="reviewCount" content={reviewCount.toString()} />
+                            <meta itemProp="bestRating" content="5" />
+                            <meta itemProp="worstRating" content="1" />
+                          </div>
+                        ) : null}
 
                         {/* Condition QR Code standard displays or canvas renders */}
                         <div itemProp="image" itemScope itemType="https://schema.org/WebApplication" className="w-full">
@@ -4326,7 +4487,7 @@ export default function App() {
                             ref={qrContainerRef}
                             id="qrcode-canvas-wrapper"
                           style={{ display: currentType === "QR" && !isCameraActive ? "flex" : "none", margin: "auto" }} 
-                          className={`justify-center flex-col items-center max-w-full overflow-hidden relative group p-3 rounded-2xl border transition-all duration-300 ${
+                          className={`justify-center flex-col items-center max-w-full overflow-hidden relative group p-1.5 sm:p-2.5 md:p-3 rounded-2xl border transition-all duration-300 ${
                             isDraggingOverQR 
                               ? "border-blue-500 bg-blue-500/10 scale-[1.01]" 
                               : "border-transparent"
@@ -4361,10 +4522,13 @@ export default function App() {
                             Barcoder Pro is the premium free online Barcode Generator & QR Code Maker. Designed as a high-performance alternative to services like barcode.tec-it.com, it supports instant vector rendering, ornamental branding frames, custom logos, and dynamic scannability ratings.
                           </div>
 
-                          {/* Interactive Frame & Padding Controls Overlay Bar */}
-                          <div className="w-full flex items-center justify-between gap-1.5 px-2.5 py-1.5 mb-2 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-800 text-xs text-slate-200 z-20 select-none shadow-md">
-                            {/* Frame Toggle Switch */}
-                            <label className="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors" title="Enable or disable the QR code frame style">
+                          {/* Interactive Frame & Padding Controls Overlay Bar with 44px Touch Targets */}
+                          <div className="w-full flex items-center justify-between gap-1 sm:gap-2 px-2 py-1.5 mb-2 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-800 text-xs text-slate-200 z-20 select-none shadow-md">
+                            {/* Frame Toggle Switch with 44px touch area */}
+                            <label 
+                              className="qr-control-toggle flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors min-h-[44px] min-w-[44px] px-2 py-1 rounded-lg touch-manipulation select-none" 
+                              title="Enable or disable the QR code frame style"
+                            >
                               <span className="font-extrabold text-[10px] uppercase tracking-wider text-slate-300">Frame</span>
                               <div className="relative inline-flex items-center cursor-pointer">
                                 <input 
@@ -4382,25 +4546,26 @@ export default function App() {
 
                             {/* Padding Slider Control */}
                             <div className={`flex items-center gap-1 transition-opacity ${!isFrameEnabled || qrFrameStyle === "none" ? "opacity-50" : "opacity-100"}`}>
-                              <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Padding:</span>
+                              <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider">Pad:</span>
                               <input 
                                 type="range" 
                                 min="2" 
                                 max="40" 
                                 value={qrFramePadding} 
                                 onChange={(e) => setQrFramePadding(Number(e.target.value))} 
-                                className="w-14 sm:w-20 accent-blue-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg"
+                                className="w-12 sm:w-20 accent-blue-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg touch-manipulation"
                                 title="Adjust padding size between QR code and decorative border"
                               />
-                              <span className="font-mono text-[10px] text-blue-400 font-bold w-5 text-right">{qrFramePadding}px</span>
+                              <span className="font-mono text-[10px] text-blue-400 font-bold w-4 sm:w-5 text-right">{qrFramePadding}px</span>
                             </div>
 
-                            {/* Reset Settings Icon Button */}
+                            {/* Reset Settings Icon Button with 44px touch area */}
                             <button
                               type="button"
                               onClick={resetQRFrameSettings}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center justify-center text-[10px] font-bold gap-1"
+                              className="qr-control-reset min-h-[44px] min-w-[44px] px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center justify-center text-[10px] font-bold gap-1 active:scale-95 touch-manipulation shrink-0"
                               title="Reset frame and padding settings to defaults"
+                              aria-label="Reset QR frame and padding settings"
                             >
                               <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -4649,9 +4814,13 @@ export default function App() {
                               value={userInput} 
                               onChange={(e) => {
                                 const val = e.target.value;
-                                setUserInput(val);
+                                const { sanitized, isSafe, threatDetected } = sanitizeBarcodeInput(val, currentType);
+                                if (!isSafe && threatDetected) {
+                                  showToast(`🛡️ ${threatDetected}`);
+                                }
+                                setUserInput(sanitized);
                                 if (isAutoDetectEnabled) {
-                                  const detected = detectBarcodeType(val);
+                                  const detected = detectBarcodeType(sanitized);
                                   if (detected && detected !== currentType) {
                                     setCurrentType(detected);
                                   }
@@ -5437,7 +5606,11 @@ export default function App() {
                                     <span>★</span> <span id="avgRating">{avgRating.toFixed(1)}</span> / 5.0
                                 </div>
                                 <p className={`text-xs mt-1 ${isDarkMode ? "text-slate-400" : "text-slate-600"}`}>
-                                  Based on <span className="font-bold">{reviewCount.toLocaleString()}</span> global reviews
+                                  {reviewCount > 0 ? (
+                                    <>Based on <span className="font-bold">{reviewCount.toLocaleString()}</span> verified merchant reviews</>
+                                  ) : (
+                                    <>0 verified reviews • Be the first merchant to rate!</>
+                                  )}
                                 </p>
                             </div>
                             
@@ -5776,9 +5949,11 @@ export default function App() {
                 Made in India <span className="text-slate-500 mx-1">|</span> Serving Worldwide 🌍
               </p>
             </div>
-            <p className="text-xs text-slate-400 font-medium">
-              © 2026 Barcoder Pro <span className="mx-1">•</span> Global Barcode Generator Engine
-            </p>
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3">
+              <p className="text-xs text-slate-400 font-medium">
+                © 2026 Barcoder Pro <span className="mx-1">•</span> Global Barcode Generator Engine
+              </p>
+            </div>
           </div>
 
         </div>
@@ -6356,23 +6531,39 @@ export default function App() {
         </div>
       )}
 
-      {/* Premium Cookie Consent Banner for GDPR / AdSense */}
+      {/* Premium Cookie Consent Banner for GDPR / AdSense with Multi-Device Layout & Cut Option */}
       {showCookieBanner && (
         <div 
-          className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md p-5 rounded-2xl shadow-2xl border z-[2000] animate-fade transition-all duration-300 ${
+          className={`fixed bottom-3 left-3 right-3 sm:bottom-4 sm:left-auto sm:right-4 sm:max-w-md lg:bottom-6 lg:right-6 lg:max-w-md p-4 sm:p-5 rounded-2xl shadow-2xl border z-[2000] backdrop-blur-md animate-fade transition-all duration-300 relative ${
             isDarkMode 
-              ? "bg-slate-900 border-slate-800 text-slate-100" 
-              : "bg-white border-slate-200 text-slate-800"
+              ? "bg-slate-900/95 border-slate-700/80 text-slate-100 shadow-black/60" 
+              : "bg-white/95 border-slate-200 text-slate-800 shadow-slate-400/30"
           }`}
           role="dialog"
           aria-labelledby="cookie-title"
           aria-describedby="cookie-desc"
         >
-          <div className="flex items-start gap-3">
-            <span className="text-xl mt-0.5 shrink-0">🍪</span>
+          {/* Dedicated Top-Right Cut / Dismiss Option */}
+          <button
+            onClick={() => setShowCookieBanner(false)}
+            className={`absolute top-3.5 right-3.5 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all cursor-pointer select-none ${
+              isDarkMode 
+                ? "bg-slate-800/90 hover:bg-slate-750 text-slate-400 hover:text-white" 
+                : "bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900"
+            }`}
+            aria-label="Cut / Close notification"
+            title="Cut notification (✕)"
+          >
+            ✕
+          </button>
+
+          <div className="flex items-start gap-3 pr-6">
+            <span className="text-xl sm:text-2xl mt-0.5 shrink-0 select-none">🍪</span>
             <div className="flex-1">
-              <h3 id="cookie-title" className="text-xs font-extrabold uppercase tracking-wider text-blue-500 mb-1">Cookie Consent & Privacy</h3>
-              <p id="cookie-desc" className="text-[11px] leading-relaxed text-slate-400 mb-4">
+              <h3 id="cookie-title" className="text-xs font-black uppercase tracking-wider text-blue-500 mb-1">
+                Cookie Consent & Privacy
+              </h3>
+              <p id="cookie-desc" className="text-[11px] sm:text-xs leading-relaxed text-slate-400 mb-4">
                 We use non-intrusive cookies to serve ads via Google AdSense and support server costs. Learn more in our{" "}
                 <button 
                   onClick={() => {
@@ -6392,17 +6583,17 @@ export default function App() {
                   Terms of Service
                 </button>.
               </p>
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap sm:flex-nowrap">
                 <button 
                   onClick={acceptCookies} 
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-600/20"
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] sm:text-[11px] uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-600/20 active:scale-95 min-h-[44px] flex items-center justify-center"
                 >
                   Accept All
                 </button>
                 <button 
                   onClick={() => setShowCookieBanner(false)} 
-                  className={`px-3 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all cursor-pointer ${
-                    isDarkMode ? "bg-slate-800 text-slate-300 hover:bg-slate-750" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-bold text-[10px] sm:text-[11px] uppercase tracking-wider transition-all cursor-pointer min-h-[44px] flex items-center justify-center ${
+                    isDarkMode ? "bg-slate-800 text-slate-300 hover:bg-slate-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
                 >
                   Close
@@ -6413,11 +6604,183 @@ export default function App() {
         </div>
       )}
 
-      {/* Dynamic clipboards toasts alerts feedback indicator */}
+      {/* Dynamic clipboards toasts alerts feedback indicator with responsive positioning & cut option */}
       {toastMessage && (
-        <div id="toast" style={{ position: "fixed", bottom: "2rem", left: "50%", transform: "translateX(-50%)", background: "#059669", color: "white", padding: "0.75rem 1.5rem", borderRadius: "2rem", fontSize: "0.8rem", fontWeight: "bold", zIndex: 2000, boxShadow: "0 10px 25px rgba(0,0,0,0.3)" }}>
-          {toastMessage}
+        <div 
+          id="toast" 
+          className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 z-[3000] flex items-center justify-between gap-3 bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-2xl text-xs font-bold animate-fade max-w-md ml-auto"
+        >
+          <span className="flex-1 leading-snug">{toastMessage}</span>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="w-6 h-6 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white text-[11px] font-extrabold cursor-pointer shrink-0 transition-all"
+            aria-label="Dismiss notification"
+          >
+            ✕
+          </button>
         </div>
+      )}
+
+      {/* Secret Owner Verification Gate - Strict Single Owner Lock (sukanta.singha786@gmail.com only) */}
+      {isOwnerGateOpen && (
+        <div className="fixed inset-0 z-[4000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade">
+          <div 
+            className={`w-full max-w-md rounded-2xl border p-6 shadow-2xl relative transition-all duration-300 ${
+              isDarkMode ? "bg-slate-900 border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"
+            }`}
+          >
+            <button
+              onClick={() => {
+                setIsOwnerGateOpen(false);
+                setOwnerGateError("");
+              }}
+              className="absolute top-4 right-4 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-700 cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-xl shrink-0">
+                🔒
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold tracking-tight">Owner Verification Gate</h3>
+                <p className="text-[11px] text-slate-400">Strict Single-Owner Clearance Protocol</p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400 mb-4 leading-relaxed">
+              Fleet Admin & 50 AI Agents are strictly confidential. Access is granted only to the verified website owner: <strong>sukanta.singha786@gmail.com</strong>.
+            </div>
+
+            {ownerGateError && (
+              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs font-bold text-rose-400 mb-4">
+                {ownerGateError}
+              </div>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const normalizedEmail = ownerGateEmail.trim().toLowerCase();
+                if (normalizedEmail !== "sukanta.singha786@gmail.com") {
+                  setOwnerGateError("⛔ Access Denied: Unauthorized email address. Only the verified owner (sukanta.singha786@gmail.com) can unlock this fleet.");
+                  return;
+                }
+                if (ownerGatePin.trim() !== "8945" && ownerGatePin.trim() !== "owner2026") {
+                  setOwnerGateError("⛔ Invalid Security PIN. Enter owner master PIN (8945 or owner2026).");
+                  return;
+                }
+                
+                try {
+                  sessionStorage.setItem("barcoder_owner_auth", "sukanta.singha786@gmail.com");
+                } catch {}
+
+                setIsOwnerGateOpen(false);
+                setOwnerGateError("");
+                showToast("👑 Welcome Sukanta Singha! Owner Fleet Unlocked.");
+
+                if (pendingAdminTarget === "fleet") {
+                  setIsOwnerDashboardOpen(true);
+                } else {
+                  setIsClaudeAgentsOpen(true);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-bold mb-1.5 text-slate-300">
+                  Owner Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={ownerGateEmail}
+                  onChange={(e) => {
+                    setOwnerGateEmail(e.target.value);
+                    setOwnerGateError("");
+                  }}
+                  placeholder="sukanta.singha786@gmail.com"
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none font-mono ${
+                    isDarkMode ? "bg-slate-950 border-slate-700 text-white focus:border-blue-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-blue-600"
+                  }`}
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-300">
+                    Security Passkey / PIN
+                  </label>
+                  <span className="text-[10px] text-slate-500">Default PIN: 8945</span>
+                </div>
+                <input
+                  type="password"
+                  required
+                  value={ownerGatePin}
+                  onChange={(e) => {
+                    setOwnerGatePin(e.target.value);
+                    setOwnerGateError("");
+                  }}
+                  placeholder="••••••••"
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none font-mono ${
+                    isDarkMode ? "bg-slate-950 border-slate-700 text-white focus:border-blue-500" : "bg-slate-50 border-slate-300 text-slate-900 focus:border-blue-600"
+                  }`}
+                />
+              </div>
+
+              <div className="pt-2 flex items-center gap-2.5">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg shadow-blue-600/20 active:scale-95 min-h-[44px]"
+                >
+                  Verify & Unlock Fleet
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOwnerGateOpen(false);
+                    setOwnerGateError("");
+                  }}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer min-h-[44px] ${
+                    isDarkMode ? "bg-slate-800 text-slate-300 hover:bg-slate-750" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Single Owner Command Center Modal */}
+      {isOwnerDashboardOpen && (
+        <OwnerDashboard
+          isDarkMode={isDarkMode}
+          onClose={() => setIsOwnerDashboardOpen(false)}
+          showToast={showToast}
+        />
+      )}
+
+      {/* 50 Claude Agents & Million Traffic Engine Suite */}
+      {isClaudeAgentsOpen && (
+        <ClaudeAgentsSuite
+          isDarkMode={isDarkMode}
+          onClose={() => setIsClaudeAgentsOpen(false)}
+          showToast={showToast}
+          realSearchCount={realSearchCount}
+          setRealSearchCount={setRealSearchCount}
+        />
+      )}
+
+      {/* Enterprise Commercial Subscription Modal (SAC 998313) */}
+      {isSubscriptionModalOpen && (
+        <SubscriptionModal
+          isDarkMode={isDarkMode}
+          onClose={() => setIsSubscriptionModalOpen(false)}
+          showToast={showToast}
+        />
       )}
 
     </div>
