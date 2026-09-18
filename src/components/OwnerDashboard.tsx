@@ -33,12 +33,16 @@ interface OwnerDashboardProps {
   isDarkMode: boolean;
   onClose: () => void;
   showToast: (msg: string) => void;
+  onOpenSeoHub?: () => void;
+  onOpenClaudeAgents?: () => void;
 }
 
 export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   isDarkMode,
   onClose,
-  showToast
+  showToast,
+  onOpenSeoHub,
+  onOpenClaudeAgents
 }) => {
   const [activeTab, setActiveTab] = useState<"overview" | "sites" | "tickets" | "pricing" | "backups">("overview");
   const [filterModel, setFilterModel] = useState<string>("all");
@@ -351,6 +355,50 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           {/* TAB 1: OVERVIEW */}
           {activeTab === "overview" && (
             <div className="space-y-6">
+              {/* Private Owner Growth Suite (sukanta.singha786@gmail.com only) */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-purple-500/40 bg-gradient-to-r from-purple-950/40 via-indigo-950/40 to-slate-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-black text-[10px] uppercase">
+                      Private Owner Suite
+                    </span>
+                    <h3 className="text-sm sm:text-base font-bold text-white">
+                      SEO 2026 &amp; 50 Claude Agents Engine
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1">
+                    Hidden from public view &amp; AdSense safe. Exclusively accessible by Sukanta Singha ({SITE_CONFIG.ownerEmail}).
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {onOpenSeoHub && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenSeoHub();
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-black shadow-lg shadow-blue-600/20 transition-all flex items-center gap-1.5 cursor-pointer min-h-[44px]"
+                    >
+                      <span>🚀</span>
+                      <span>Open SEO Growth Hub (AEO/GEO)</span>
+                    </button>
+                  )}
+                  {onOpenClaudeAgents && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenClaudeAgents();
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black shadow-lg shadow-purple-600/20 transition-all flex items-center gap-1.5 cursor-pointer min-h-[44px]"
+                    >
+                      <span>🤖</span>
+                      <span>Open 50 Claude Agents</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Stat Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50">

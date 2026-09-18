@@ -24,6 +24,9 @@ import {
 import { OwnerDashboard } from "./components/OwnerDashboard";
 import { ClaudeAgentsSuite } from "./components/ClaudeAgentsSuite";
 import { SubscriptionModal } from "./components/SubscriptionModal";
+import { SeoGrowthHub2026 } from "./components/SeoGrowthHub2026";
+import { PrintPreviewModal } from "./components/PrintPreviewModal";
+import { ReferralModal, ReferralState } from "./components/ReferralModal";
 import { sanitizeBarcodeInput, sanitizeBulkInput, escapeHtml } from "./lib/sanitizer";
 
 interface BarcodeType {
@@ -830,6 +833,18 @@ export default function App() {
   // Output Dimensions / Scale Factor multiplier (Range: 1 to 5)
   const [scaleFactor, setScaleFactor] = useState<number>(2);
 
+  // Manual Barcode Dimensions in Pixels (User Pixel-Level Dimension Control)
+  const [isCustomDimensionsActive, setIsCustomDimensionsActive] = useState<boolean>(false);
+  const [customWidthPx, setCustomWidthPx] = useState<number>(300);
+  const [customHeightPx, setCustomHeightPx] = useState<number>(100);
+
+  // Dedicated A4 Sheet Canvas Print Preview Modal State
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState<boolean>(false);
+
+  // Bulk Generator CSV Upload State & Reference
+  const csvFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDraggingCsv, setIsDraggingCsv] = useState<boolean>(false);
+
   // Automatically adjust default scaleFactor on mount or when viewport size shifts
   useEffect(() => {
     setScaleFactor(recommendedDefaultScale);
@@ -927,7 +942,36 @@ export default function App() {
   // Single Owner Command Center, 50 Claude Agents & Subscription Modal States
   const [isOwnerDashboardOpen, setIsOwnerDashboardOpen] = useState<boolean>(false);
   const [isClaudeAgentsOpen, setIsClaudeAgentsOpen] = useState<boolean>(false);
+  const [isSeoHubOpen, setIsSeoHubOpen] = useState<boolean>(false);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState<boolean>(false);
+
+  // Viral Referral & Customer Reward State (Double-Sided Perks)
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState<boolean>(false);
+  const [referralState, setReferralState] = useState<ReferralState>(() => {
+    const defaultCode = "BP-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+    try {
+      const saved = localStorage.getItem("barcoder_referral_state");
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {}
+    return {
+      referralCode: defaultCode,
+      referralCount: 0,
+      unlockedTiers: [],
+      claimedRewards: [],
+    };
+  });
+
+  const updateReferralState = (newState: ReferralState) => {
+    setReferralState(newState);
+    try {
+      localStorage.setItem("barcoder_referral_state", JSON.stringify(newState));
+    } catch {}
+  };
+
+  // Dynamically calculate maximum bulk generation limit based on referrals
+  const maxBulkLimit = referralState.referralCount >= 5 ? 10000 : referralState.referralCount >= 1 ? 1000 : 250;
   const [realSearchCount, setRealSearchCount] = useState<number>(() => {
     try {
       const s = localStorage.getItem("real_search_count");
@@ -945,7 +989,7 @@ export default function App() {
 
   // Strict Single Owner Gate & Authentication States (sukanta.singha786@gmail.com only)
   const [isOwnerGateOpen, setIsOwnerGateOpen] = useState<boolean>(false);
-  const [pendingAdminTarget, setPendingAdminTarget] = useState<"fleet" | "agents" | null>(null);
+  const [pendingAdminTarget, setPendingAdminTarget] = useState<"fleet" | "agents" | "seo" | null>(null);
   const [ownerGateEmail, setOwnerGateEmail] = useState<string>("");
   const [ownerGatePin, setOwnerGatePin] = useState<string>("");
   const [ownerGateError, setOwnerGateError] = useState<string>("");
@@ -960,9 +1004,10 @@ export default function App() {
     }
   };
 
-  const triggerOwnerGate = (target: "fleet" | "agents") => {
+  const triggerOwnerGate = (target: "fleet" | "agents" | "seo") => {
     if (checkIsOwnerAuthenticated()) {
       if (target === "fleet") setIsOwnerDashboardOpen(true);
+      else if (target === "seo") setIsSeoHubOpen(true);
       else setIsClaudeAgentsOpen(true);
       showToast("👑 Owner identity confirmed (sukanta.singha786@gmail.com)");
     } else {
@@ -989,8 +1034,8 @@ export default function App() {
     }
   };
 
-  // Single Owner Secret Access listener (Ctrl+Shift+O for Fleet, Ctrl+Shift+A for Agents)
-  // Or append ?admin=owner or ?manage=fleet to the URL
+  // Single Owner Secret Access listener (Ctrl+Shift+O for Fleet, Ctrl+Shift+A for Agents, Ctrl+Shift+S for SEO)
+  // Or append ?admin=owner or ?manage=fleet or ?admin=seo to the URL
   useEffect(() => {
     const handleAdminKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "o") {
@@ -999,6 +1044,9 @@ export default function App() {
       } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "a") {
         e.preventDefault();
         triggerOwnerGate("agents");
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        triggerOwnerGate("seo");
       }
     };
     window.addEventListener("keydown", handleAdminKey);
@@ -1009,6 +1057,8 @@ export default function App() {
         triggerOwnerGate("fleet");
       } else if (params.get("admin") === "agents" || params.get("manage") === "agents") {
         triggerOwnerGate("agents");
+      } else if (params.get("admin") === "seo" || params.get("manage") === "seo") {
+        triggerOwnerGate("seo");
       }
     } catch {}
 
@@ -1463,7 +1513,7 @@ export default function App() {
       generateCode();
     }, 120);
     return () => clearTimeout(timer);
-  }, [userInput, currentType, qrErrorCorrectionLevel, scaleFactor, foregroundColor, backgroundColor, displayValue, qrLogoImage, qrLogoSize, qrFrameStyle, qrFrameText, qrFrameColor, responsiveQrWidth, wrapperWidth, qrContainerWidth]);
+  }, [userInput, currentType, qrErrorCorrectionLevel, scaleFactor, foregroundColor, backgroundColor, displayValue, qrLogoImage, qrLogoSize, qrFrameStyle, qrFrameText, qrFrameColor, responsiveQrWidth, wrapperWidth, qrContainerWidth, isCustomDimensionsActive, customWidthPx, customHeightPx]);
 
   const selectType = (typeId: string, disableAutoDetect = true) => {
     setCurrentType(typeId);
@@ -2043,9 +2093,11 @@ export default function App() {
             // Determine optimal display QR width that never overflows the container
             // On mobile viewports, let it perfectly fill the container (minus a subtle padding) to prevent horizontal overflow.
             const isMobileViewport = qrContainerWidth < 640;
-            const targetQrWidth = isMobileViewport
-              ? Math.max(120, qrContainerWidth - 24)
-              : Math.min(Math.round(responsiveQrWidth * scaleFactor), Math.max(120, qrContainerWidth - 32));
+            const targetQrWidth = isCustomDimensionsActive
+              ? (isMobileViewport ? Math.min(customWidthPx, Math.max(120, qrContainerWidth - 24)) : customWidthPx)
+              : isMobileViewport
+                ? Math.max(120, qrContainerWidth - 24)
+                : Math.min(Math.round(responsiveQrWidth * scaleFactor), Math.max(120, qrContainerWidth - 32));
 
             QRCode.toCanvas(qrCanvas, processedData, {
               width: targetQrWidth,
@@ -2108,13 +2160,16 @@ export default function App() {
           if (barcodeCanvas) {
             const bcid = getBcidForType(currentType);
             const maxAllowedScale = Math.max(1, Math.floor((wrapperWidth - 32) / 80));
-            const finalBwipScale = Math.min(scaleFactor, maxAllowedScale);
+            const finalBwipScale = isCustomDimensionsActive
+              ? Math.min(Math.max(1, Math.round(customWidthPx / 120)), maxAllowedScale)
+              : Math.min(scaleFactor, maxAllowedScale);
 
             try {
               bwipjs.toCanvas(barcodeCanvas, {
                 bcid: bcid,
                 text: processedData,
                 scale: finalBwipScale,
+                height: isCustomDimensionsActive ? Math.max(15, Math.round(customHeightPx / 8)) : undefined,
                 includetext: displayValue,
                 textxalign: 'center',
                 barcolor: foregroundColor.replace('#', ''),
@@ -2127,11 +2182,11 @@ export default function App() {
                 JsBarcode(barcodeCanvas, processedData, {
                   format: "CODE128",
                   lineColor: foregroundColor,
-                  width: 1.2 * scaleFactor,
-                  height: Math.round(40 * scaleFactor + 5),
+                  width: isCustomDimensionsActive ? Math.max(0.6, (customWidthPx - 40) / 100) : 1.2 * scaleFactor,
+                  height: isCustomDimensionsActive ? Math.max(25, customHeightPx - 25) : Math.round(40 * scaleFactor + 5),
                   displayValue: displayValue,
-                  fontSize: Math.round(7 * scaleFactor),
-                  margin: Math.round(6 * scaleFactor),
+                  fontSize: isCustomDimensionsActive ? Math.max(9, Math.round(customHeightPx * 0.16)) : Math.round(7 * scaleFactor),
+                  margin: isCustomDimensionsActive ? Math.min(15, Math.round(customHeightPx * 0.06)) : Math.round(6 * scaleFactor),
                   background: backgroundColor
                 });
                 setFormatError(false);
@@ -2162,10 +2217,18 @@ export default function App() {
               // We want: (estimatedModules * finalBarWidth) + padding < wrapperWidth
               const maxAllowedBarWidth = Math.max(0.8, (wrapperWidth - 40) / (estimatedModules || 95));
               // Clamp final bar width to standard values so it remains sharp and easy to scan
-              const finalBarWidth = Math.min(1.15 * scaleFactor, maxAllowedBarWidth);
-              const finalHeight = Math.min(120, Math.round(40 * scaleFactor + 5));
-              const finalFontSize = Math.min(15, Math.round(7 * scaleFactor));
-              const finalMargin = Math.min(20, Math.round(6 * scaleFactor));
+              const finalBarWidth = isCustomDimensionsActive
+                ? Math.min(Math.max(0.6, (customWidthPx - 40) / (estimatedModules || 95)), maxAllowedBarWidth)
+                : Math.min(1.15 * scaleFactor, maxAllowedBarWidth);
+              const finalHeight = isCustomDimensionsActive
+                ? Math.max(25, customHeightPx - (displayValue ? 28 : 10))
+                : Math.min(120, Math.round(40 * scaleFactor + 5));
+              const finalFontSize = isCustomDimensionsActive
+                ? Math.max(9, Math.min(18, Math.round(customHeightPx * 0.16)))
+                : Math.min(15, Math.round(7 * scaleFactor));
+              const finalMargin = isCustomDimensionsActive
+                ? Math.min(15, Math.max(4, Math.round(customHeightPx * 0.06)))
+                : Math.min(20, Math.round(6 * scaleFactor));
 
               JsBarcode(barcodeCanvas, processedData, {
                 format: currentType === "MSI" ? "MSI" : currentType,
@@ -2218,6 +2281,27 @@ export default function App() {
     }, 2000);
   };
 
+  // Detect referral invite from URL query param (?ref=BP-XXXX)
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const refParam = urlParams.get("ref");
+      if (refParam && refParam.trim()) {
+        const storedReferredBy = localStorage.getItem("barcoder_referred_by");
+        if (!storedReferredBy) {
+          localStorage.setItem("barcoder_referred_by", refParam.trim());
+          setReferralState(prev => ({
+            ...prev,
+            referredBy: refParam.trim(),
+          }));
+          setTimeout(() => {
+            showToast(`🎁 Referral Gift Activated via ${refParam}! +500 Free Bulk Quotas Unlocked!`);
+          }, 1000);
+        }
+      }
+    } catch {}
+  }, []);
+
   const handleDownload = (format: "png" | "svg" | "pdf" = downloadFormat) => {
     const canvas = getSelectedCanvas(true);
     let imgData: string | null = null;
@@ -2228,6 +2312,9 @@ export default function App() {
     if (imgData && canvas) {
       const slicedInput = userInput.slice(0, 15).replace(/[^a-zA-Z0-9]/g, "_") || "barcode";
       const filename = `BarcoderPro_${currentType}_${slicedInput}`;
+
+      // Increment realSearchCount for MILLION LOOP habit engine
+      setRealSearchCount((prev) => prev + 1);
 
       if (format === "png") {
         const a = document.createElement("a");
@@ -2460,13 +2547,13 @@ export default function App() {
     setRangeLastCode(val);
     const parsed = parseRangeCodeString(val);
     if (parsed.num >= rangeStartNum) {
-      const computed = Math.min(250, Math.floor((parsed.num - rangeStartNum) / Math.max(1, rangeStep)) + 1);
+      const computed = Math.min(maxBulkLimit, Math.floor((parsed.num - rangeStartNum) / Math.max(1, rangeStep)) + 1);
       setRangeCount(Math.max(1, computed));
     }
   };
 
   const handleSetRangeCount = (count: number) => {
-    const clamped = Math.min(Math.max(1, count), 250);
+    const clamped = Math.min(Math.max(1, count), maxBulkLimit);
     setRangeCount(clamped);
     const endNum = rangeStartNum + (clamped - 1) * Math.max(1, rangeStep);
     const padded = rangePadding > 0 ? String(endNum).padStart(rangePadding, "0") : String(endNum);
@@ -2617,24 +2704,24 @@ export default function App() {
           const pad = rangeMatch[2].length;
           const start = Math.min(numA, numB);
           const end = Math.max(numA, numB);
-          const count = Math.min(250, end - start + 1);
+          const count = Math.min(maxBulkLimit, end - start + 1);
           for (let k = 0; k < count; k++) {
             const currentNum = start + k;
             const padded = pad > 0 ? String(currentNum).padStart(pad, "0") : String(currentNum);
             parsedItems.push(`${prefixA}${padded}`);
-            if (parsedItems.length >= 250) break;
+            if (parsedItems.length >= maxBulkLimit) break;
           }
         } else {
           parsedItems.push(trimmed);
         }
-        if (parsedItems.length >= 250) break;
+        if (parsedItems.length >= maxBulkLimit) break;
       }
 
-      if (parsedItems.length > 250) {
-        showToast("⚠️ Limit is 250 barcodes per batch.");
+      if (parsedItems.length > maxBulkLimit) {
+        showToast(`⚠️ Batch capped at ${maxBulkLimit} barcodes. 🎁 Invite friends to unlock up to 10,000!`);
       }
 
-      const truncatedItems = parsedItems.slice(0, 250);
+      const truncatedItems = parsedItems.slice(0, maxBulkLimit);
       const generated = truncatedItems.map((item, idx) => {
         const detectedType = bulkAutoDetect ? (detectBarcodeType(item) || bulkFormat) : bulkFormat;
         const sanitizedItem = sanitizeBarcodeInput(item, detectedType).sanitized || item;
@@ -3276,6 +3363,84 @@ export default function App() {
     );
   };
 
+  // CSV File Parser & Uploader for Bulk Batch Generator
+  const handleCsvFileUpload = (file: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        if (!text || !text.trim()) {
+          showToast("⚠️ Empty file selected.");
+          return;
+        }
+
+        // Split into lines
+        const lines = text.split(/\r\n|\n|\r/).map((r) => r.trim()).filter((r) => r.length > 0);
+        if (lines.length === 0) {
+          showToast("⚠️ No data lines found in CSV.");
+          return;
+        }
+
+        // Detect delimiter: comma, semicolon, tab, or pipe
+        const firstLine = lines[0];
+        let delimiter = ",";
+        if (firstLine.includes("\t")) delimiter = "\t";
+        else if (firstLine.includes(";") && !firstLine.includes(",")) delimiter = ";";
+        else if (firstLine.includes("|") && !firstLine.includes(",")) delimiter = "|";
+
+        // Check if row 0 has header tokens
+        const headerTokens = firstLine.split(delimiter).map((t) => t.trim().replace(/^["']|["']$/g, "").toLowerCase());
+        const barcodeColIdx = headerTokens.findIndex((h) => 
+          ["barcode", "code", "id", "sku", "data", "value", "upc", "ean", "serial", "number", "item"].some((k) => h.includes(k))
+        );
+
+        // Determine if first row is a descriptive header
+        const hasHeader = barcodeColIdx !== -1 || headerTokens.some((h) => isNaN(Number(h)) && h.length > 0 && !h.match(/^[0-9A-Z\-_]+$/));
+        const startIndex = hasHeader ? 1 : 0;
+        const targetCol = barcodeColIdx !== -1 ? barcodeColIdx : 0;
+
+        const extractedCodes: string[] = [];
+        for (let i = startIndex; i < lines.length; i++) {
+          const row = lines[i];
+          const cols = row.split(delimiter).map((c) => c.trim().replace(/^["']|["']$/g, ""));
+          const val = cols[targetCol] !== undefined && cols[targetCol] !== "" ? cols[targetCol] : cols[0];
+          if (val && val.length > 0) {
+            extractedCodes.push(val);
+          }
+        }
+
+        if (extractedCodes.length === 0) {
+          showToast("⚠️ Could not extract any valid barcode lines from CSV.");
+          return;
+        }
+
+        // Switch automatically to manual custom text mode and populate
+        setBulkInputMode("manual");
+        setBulkInputText(extractedCodes.join("\n"));
+        showToast(`✅ Successfully parsed ${extractedCodes.length} barcodes from ${file.name}!`);
+      } catch (err) {
+        console.error(err);
+        showToast("❌ Error parsing CSV file. Please verify formatting.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDownloadSampleCsv = () => {
+    const sample = "Barcode,Product Name,SKU,Department\nPROD-00101,Standard Widget,WGT-101,Warehouse\nPROD-00102,Premium Fastener,FST-102,Manufacturing\nPROD-00103,Smart Tag,TAG-103,Logistics\nPROD-00104,Universal Sensor,SNS-104,Electronics\nPROD-00105,Safety Latch,LTC-105,Security\nPROD-00106,Industrial Cable,CBL-106,Electrical";
+    const blob = new Blob([sample], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "barcoder_sample_bulk_import.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("📥 Downloaded Sample CSV Template!");
+  };
+
   // 2. BULK BATCH GENERATOR VIEW
   const renderBulkGeneratorPage = () => {
     const filteredCodes = bulkCodes.filter((c) =>
@@ -3363,6 +3528,38 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2">
+              <input
+                type="file"
+                ref={csvFileInputRef}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleCsvFileUpload(e.target.files[0]);
+                    e.target.value = "";
+                  }
+                }}
+                accept=".csv,.tsv,.txt,text/csv,text/plain"
+                className="hidden"
+                style={{ display: "none" }}
+              />
+
+              <button
+                type="button"
+                onClick={() => csvFileInputRef.current?.click()}
+                className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 uppercase tracking-wider flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/30 hover:bg-emerald-500/10 cursor-pointer transition-colors shadow-xs active:scale-95"
+                title="Upload CSV / TSV file of barcodes and automatically populate list"
+              >
+                <span>📁</span> Upload CSV
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsReferralModalOpen(true)}
+                className="text-xs font-extrabold text-amber-600 dark:text-amber-400 hover:text-amber-500 uppercase tracking-wider flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-500/30 hover:bg-amber-500/10 cursor-pointer transition-colors shadow-xs active:scale-95"
+                title={`Unlock 1,000 to 10,000 bulk barcode quota via Referral Program. Current batch allowance: ${maxBulkLimit} codes.`}
+              >
+                <span>🎁</span> Refer & Earn ({maxBulkLimit})
+              </button>
+
               <button
                 type="button"
                 onClick={() => setIsBulkSettingsModalOpen(true)}
@@ -3776,7 +3973,26 @@ export default function App() {
                     }`}>
                       Type or Paste Barcode Lines (one per line, or comma-separated)
                     </label>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => csvFileInputRef.current?.click()}
+                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-all shadow-xs active:scale-95"
+                        title="Upload CSV / TSV file of barcodes and automatically populate textarea"
+                      >
+                        <span>📁</span> Upload CSV
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDownloadSampleCsv}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                          isDarkMode ? "bg-slate-900 border-slate-700 text-slate-400 hover:text-white" : "bg-white border-slate-300 text-slate-600 hover:text-slate-900"
+                        }`}
+                        title="Download sample CSV template"
+                      >
+                        <span>📥</span> Template
+                      </button>
+                      <span className="text-slate-400 text-[10px]">•</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -3786,7 +4002,7 @@ export default function App() {
                         }}
                         className="text-[10px] font-bold text-blue-500 hover:underline cursor-pointer"
                       >
-                        + Sample 100
+                        + 100
                       </button>
                       <span className="text-slate-400 text-[10px]">•</span>
                       <button
@@ -3798,7 +4014,7 @@ export default function App() {
                         }}
                         className="text-[10px] font-bold text-purple-500 hover:underline cursor-pointer"
                       >
-                        + Sample 200
+                        + 200
                       </button>
                       <span className="text-slate-400 text-[10px]">•</span>
                       <button
@@ -3810,16 +4026,39 @@ export default function App() {
                       </button>
                     </div>
                   </div>
-                  <textarea
-                    value={bulkInputText}
-                    onChange={(e) => setBulkInputText(e.target.value)}
-                    className={`w-full h-44 p-4 rounded-xl border text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono leading-relaxed resize-y ${
-                      isDarkMode ? "bg-slate-950 border-slate-850 text-white" : "bg-slate-50 border-slate-200 text-slate-800"
-                    }`}
-                    placeholder="PROD-0001&#10;PROD-0002&#10;PROD-0003&#10;or write range like: 1..200"
-                  ></textarea>
+                  <div className="relative">
+                    <textarea
+                      value={bulkInputText}
+                      onChange={(e) => setBulkInputText(e.target.value)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDraggingCsv(true);
+                      }}
+                      onDragLeave={() => setIsDraggingCsv(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingCsv(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleCsvFileUpload(e.dataTransfer.files[0]);
+                        }
+                      }}
+                      className={`w-full h-44 p-4 rounded-xl border text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono leading-relaxed resize-y ${
+                        isDraggingCsv 
+                          ? "border-emerald-500 ring-2 ring-emerald-500/50 bg-emerald-500/5" 
+                          : isDarkMode ? "bg-slate-950 border-slate-850 text-white" : "bg-slate-50 border-slate-200 text-slate-800"
+                      }`}
+                      placeholder="PROD-0001&#10;PROD-0002&#10;PROD-0003&#10;or write range like: 1..200&#10;or drop a CSV / TSV file here..."
+                    ></textarea>
+                    {isDraggingCsv && (
+                      <div className="absolute inset-0 bg-emerald-500/10 backdrop-blur-xs border-2 border-dashed border-emerald-500 rounded-xl flex items-center justify-center pointer-events-none">
+                        <span className="text-xs font-extrabold text-emerald-400 bg-black/80 px-3 py-1.5 rounded-lg shadow-lg">
+                          📂 Drop your CSV file here to auto-import barcodes
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <p className={`text-[9px] ${isDarkMode ? "text-slate-500" : "text-slate-500 font-medium"}`}>
-                    💡 Tip: You can type range syntax like <code className="font-bold">1..200</code> or <code className="font-bold">PROD-001..PROD-200</code> to auto-expand up to 250 codes!
+                    💡 Tip: Click <strong>Upload CSV</strong> or drag and drop your spreadsheet file. Supports barcode headers, custom columns, and range syntax like <code className="font-bold">1..200</code>!
                   </p>
                 </div>
               )}
@@ -4090,11 +4329,12 @@ export default function App() {
 
         {/* Settings Modal for Bulk Generator */}
         {isBulkSettingsModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fade" onClick={() => setIsBulkSettingsModalOpen(false)}>
             <div 
-              className={`w-full max-w-md rounded-2rem p-6 border shadow-2xl space-y-5 transition-all ${
+              className={`w-full max-w-md max-h-[88vh] overflow-y-auto rounded-2xl p-5 sm:p-6 border shadow-2xl space-y-4 sm:space-y-5 transition-all ${
                 isDarkMode ? "bg-slate-900 border-slate-750 text-white" : "bg-white border-slate-200 text-slate-900"
               }`}
+              onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-labelledby="bulk-settings-title"
@@ -4105,8 +4345,11 @@ export default function App() {
                 </h3>
                 <button
                   onClick={() => setIsBulkSettingsModalOpen(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer text-sm font-bold"
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${
+                    isDarkMode ? "text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-750" : "text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200"
+                  }`}
                   aria-label="Close settings"
+                  title="Close settings"
                 >
                   ✕
                 </button>
@@ -4287,21 +4530,38 @@ export default function App() {
                 </div>
             </div>
             
-            {/* Day / Night dynamic switcher controls - Clean public header matching Screenshot 1 */}
+            {/* Day / Night dynamic switcher & Referral controls - Clean compact design */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button
+                  type="button"
+                  onClick={() => setIsReferralModalOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer transition-all whitespace-nowrap min-h-[32px] sm:min-h-[34px]"
+                  title="Invite Friends & Unlock Pro Batch Quotas + VIP Vector Packs"
+                  aria-label="Open Referral Program"
+                >
+                  <span className="text-xs">🎁</span>
+                  <span className="hidden xs:inline">Refer & Earn</span>
+                  <span className="xs:hidden">Refer</span>
+                  {referralState.referralCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-slate-950 text-amber-400 text-[9px] flex items-center justify-center font-black">
+                      {referralState.referralCount}
+                    </span>
+                  )}
+                </button>
+
+                <button
                   onClick={() => setIsDarkMode(!isDarkMode)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full border transition-all text-[11px] sm:text-xs font-bold select-none cursor-pointer whitespace-nowrap min-h-[44px] ${
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full border transition-all text-[10px] sm:text-[11px] font-bold select-none cursor-pointer whitespace-nowrap min-h-[32px] sm:min-h-[34px] shadow-sm ${
                     isDarkMode 
-                      ? "bg-slate-800/80 hover:bg-slate-700 text-amber-400 border-slate-700 shadow-sm" 
-                      : "bg-white hover:bg-slate-100 text-[#0f172a] border-slate-300 shadow-sm"
+                      ? "bg-slate-800/80 hover:bg-slate-700 text-amber-400 border-slate-700" 
+                      : "bg-white hover:bg-slate-100 text-[#0f172a] border-slate-300"
                   }`}
                   aria-label="Toggle Night/Day Mode"
                 >
                   <span>{isDarkMode ? "☀️ Day" : "🌙 Night"}</span>
                 </button>
-                <div className="bg-black/35 backdrop-blur-sm px-2.5 py-1.5 rounded-full border border-white/20 flex items-center gap-1 shrink-0" title="System Status: Operational & Anti-Virus Active">
-                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_6px_#2dd4bf]" aria-label="Status Online"></span>
+                <div className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full border border-white/20 flex items-center gap-1 shrink-0 min-h-[32px] sm:min-h-[34px]" title="System Status: Operational & Verified">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_5px_#2dd4bf]" aria-label="Status Online"></span>
                 </div>
             </div>
         </div>
@@ -5241,46 +5501,183 @@ export default function App() {
 
                         <div className="animate-fade-in space-y-2">
                             <div className="flex justify-between items-center">
-                                <label htmlFor="scaleSlider" className={`block text-[11px] font-bold uppercase tracking-widest ${
+                                <label className={`block text-[11px] font-bold uppercase tracking-widest ${
                                   isDarkMode ? "text-slate-300" : "text-slate-655"
                                 }`}>
-                                  Step 4: Image Scale & Output Quality
+                                  Step 4: Dimensions & Output Resolution
                                 </label>
-                                <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-blue-600/10 text-blue-500 border border-blue-500/20">
-                                  {scaleFactor.toFixed(1)}x {scaleFactor === 2 ? "(Default)" : scaleFactor === 5 ? "(Ultra High)" : scaleFactor === 1 ? "(Compact)" : ""}
-                                </span>
+                                <div className="flex items-center gap-1 bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg">
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsCustomDimensionsActive(false)}
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                                      !isCustomDimensionsActive
+                                        ? "bg-blue-600 text-white shadow-xs"
+                                        : isDarkMode ? "text-slate-400 hover:text-white" : "text-slate-600 hover:text-slate-900"
+                                    }`}
+                                  >
+                                    Auto Scale
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsCustomDimensionsActive(true)}
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                                      isCustomDimensionsActive
+                                        ? "bg-blue-600 text-white shadow-xs"
+                                        : isDarkMode ? "text-slate-400 hover:text-white" : "text-slate-600 hover:text-slate-900"
+                                    }`}
+                                  >
+                                    Custom Px
+                                  </button>
+                                </div>
                             </div>
+
                             <div className={`p-4 rounded-xl border flex flex-col gap-3 transition-all duration-300 ${
                               isDarkMode 
                                 ? "bg-slate-900/40 border-slate-700/60" 
                                 : "bg-slate-50 border-slate-200"
                             }`}>
-                                <div className="flex items-center gap-4">
-                                    <span className="text-xs font-bold text-slate-400 select-none">1x</span>
-                                    <input 
-                                      type="range" 
-                                      id="scaleSlider"
-                                      min="1" 
-                                      max="5" 
-                                      step="0.5" 
-                                      value={scaleFactor} 
-                                      onChange={(e) => setScaleFactor(parseFloat(e.target.value))}
-                                      className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-1"
-                                      aria-label="Adjust Output Scale Factor"
-                                    />
-                                    <span className="text-xs font-bold text-slate-400 select-none">5x</span>
-                                </div>
-                                <div className="flex justify-between items-center text-[10px] text-slate-400">
-                                    <span className="font-semibold text-slate-505">📱 Interactive UI Preview</span>
-                                    <span>
-                                      💾 Download: <strong className={isDarkMode ? "text-slate-200 font-bold" : "text-slate-800 font-bold"}>
-                                        {currentType === "QR" 
-                                          ? `${Math.round(100 * scaleFactor)} x ${Math.round(100 * scaleFactor)} px` 
-                                          : `${Math.round(230 * scaleFactor)} x ${Math.round(75 * scaleFactor + 40)} px`
-                                        }
-                                      </strong>
-                                    </span>
-                                </div>
+                                {!isCustomDimensionsActive ? (
+                                  <>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-xs font-bold text-slate-400 select-none">1x</span>
+                                        <input 
+                                          type="range" 
+                                          id="scaleSlider"
+                                          min="1" 
+                                          max="5" 
+                                          step="0.5" 
+                                          value={scaleFactor} 
+                                          onChange={(e) => setScaleFactor(parseFloat(e.target.value))}
+                                          className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-1"
+                                          aria-label="Adjust Output Scale Factor"
+                                        />
+                                        <span className="text-xs font-bold text-slate-400 select-none">5x</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[10px] text-slate-400">
+                                        <span className="font-semibold text-slate-505">📱 Scale Factor: {scaleFactor.toFixed(1)}x</span>
+                                        <span>
+                                          💾 Render: <strong className={isDarkMode ? "text-slate-200 font-bold" : "text-slate-800 font-bold"}>
+                                            {currentType === "QR" 
+                                              ? `${Math.round(100 * scaleFactor)} × ${Math.round(100 * scaleFactor)} px` 
+                                              : `${Math.round(230 * scaleFactor)} × ${Math.round(75 * scaleFactor + 40)} px`
+                                            }
+                                          </strong>
+                                        </span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  /* Custom Manual Width & Height in Pixels */
+                                  <div className="space-y-3 animate-fade">
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <div>
+                                        <label htmlFor="custom-barcode-width" className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${
+                                          isDarkMode ? "text-slate-350" : "text-slate-650"
+                                        }`}>
+                                          Width (px)
+                                        </label>
+                                        <div className="relative">
+                                          <input
+                                            id="custom-barcode-width"
+                                            type="number"
+                                            min="60"
+                                            max="2400"
+                                            step="10"
+                                            value={customWidthPx}
+                                            onChange={(e) => setCustomWidthPx(Math.max(50, Math.min(3000, parseInt(e.target.value, 10) || 100)))}
+                                            className={`w-full px-3 py-2 rounded-lg border text-xs font-bold font-mono outline-none transition-all ${
+                                              isDarkMode ? "bg-slate-950 border-slate-700 text-white focus:border-blue-500" : "bg-white border-slate-300 text-slate-900 focus:border-blue-500"
+                                            }`}
+                                            placeholder="300"
+                                          />
+                                          <span className="absolute right-2.5 top-2 text-[10px] font-bold text-slate-400 pointer-events-none">px</span>
+                                        </div>
+                                      </div>
+
+                                      <div>
+                                        <label htmlFor="custom-barcode-height" className={`block text-[10px] font-bold uppercase tracking-wider mb-1 ${
+                                          isDarkMode ? "text-slate-350" : "text-slate-650"
+                                        }`}>
+                                          Height (px)
+                                        </label>
+                                        <div className="relative">
+                                          <input
+                                            id="custom-barcode-height"
+                                            type="number"
+                                            min="30"
+                                            max="2000"
+                                            step="5"
+                                            value={customHeightPx}
+                                            onChange={(e) => setCustomHeightPx(Math.max(25, Math.min(2400, parseInt(e.target.value, 10) || 50)))}
+                                            className={`w-full px-3 py-2 rounded-lg border text-xs font-bold font-mono outline-none transition-all ${
+                                              isDarkMode ? "bg-slate-950 border-slate-700 text-white focus:border-blue-500" : "bg-white border-slate-300 text-slate-900 focus:border-blue-500"
+                                            }`}
+                                            placeholder="100"
+                                          />
+                                          <span className="absolute right-2.5 top-2 text-[10px] font-bold text-slate-400 pointer-events-none">px</span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Quick Dimension Presets */}
+                                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                                      <span className="text-[9px] font-bold text-slate-400 uppercase">Presets:</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => { setCustomWidthPx(300); setCustomHeightPx(100); }}
+                                        className={`px-2 py-0.5 rounded text-[9px] font-bold border transition-all cursor-pointer ${
+                                          customWidthPx === 300 && customHeightPx === 100
+                                            ? "bg-blue-600 text-white border-blue-600"
+                                            : isDarkMode ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
+                                        }`}
+                                      >
+                                        300×100
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => { setCustomWidthPx(400); setCustomHeightPx(150); }}
+                                        className={`px-2 py-0.5 rounded text-[9px] font-bold border transition-all cursor-pointer ${
+                                          customWidthPx === 400 && customHeightPx === 150
+                                            ? "bg-blue-600 text-white border-blue-600"
+                                            : isDarkMode ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
+                                        }`}
+                                      >
+                                        400×150
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => { setCustomWidthPx(250); setCustomHeightPx(250); }}
+                                        className={`px-2 py-0.5 rounded text-[9px] font-bold border transition-all cursor-pointer ${
+                                          customWidthPx === 250 && customHeightPx === 250
+                                            ? "bg-blue-600 text-white border-blue-600"
+                                            : isDarkMode ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
+                                        }`}
+                                      >
+                                        250×250
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => { setCustomWidthPx(600); setCustomHeightPx(200); }}
+                                        className={`px-2 py-0.5 rounded text-[9px] font-bold border transition-all cursor-pointer ${
+                                          customWidthPx === 600 && customHeightPx === 200
+                                            ? "bg-blue-600 text-white border-blue-600"
+                                            : isDarkMode ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-300 text-slate-700 hover:bg-slate-100"
+                                        }`}
+                                      >
+                                        600×200
+                                      </button>
+                                    </div>
+
+                                    <div className="flex justify-between items-center text-[10px] text-slate-400 pt-1 border-t border-slate-200/40 dark:border-slate-800/40">
+                                      <span className="font-semibold text-emerald-500">✓ Custom pixel lock active</span>
+                                      <span>
+                                        Dimensions: <strong className={isDarkMode ? "text-slate-200 font-bold" : "text-slate-800 font-bold"}>
+                                          {customWidthPx} × {customHeightPx} px
+                                        </strong>
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
                             </div>
                         </div>
 
@@ -5354,13 +5751,25 @@ export default function App() {
                             </button>
                         </div>
 
-                        <div className="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-800">
+                        <div className="mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <button
+                              onClick={() => setIsPrintPreviewOpen(true)}
+                              className={`py-3.5 px-4 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all outline-none shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer text-white bg-gradient-to-r ${
+                                isDarkMode 
+                                  ? "from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500" 
+                                  : "from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500"
+                              }`}
+                              type="button"
+                              aria-label="Open Canvas A4 Print Preview Modal"
+                            >
+                              <span>👁️</span> Print Preview (A4 Canvas)
+                            </button>
                             <button
                               onClick={() => {
                                 setIsSheetModalOpen(true);
                                 applyPreset(selectedPresetId);
                               }}
-                              className={`w-full py-4 px-5 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2.5 transition-all outline-none duration-300 shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer text-white bg-gradient-to-r ${
+                              className={`py-3.5 px-4 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all outline-none shadow-md hover:shadow-lg active:scale-[0.98] cursor-pointer text-white bg-gradient-to-r ${
                                 isDarkMode 
                                   ? "from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500" 
                                   : "from-indigo-500 to-blue-600 hover:from-indigo-400 hover:to-blue-500"
@@ -5368,7 +5777,7 @@ export default function App() {
                               type="button"
                               aria-label="Format and Print multiple barcodes onto an A4 label sticker sheet"
                             >
-                              <span>🖨️</span> Format & Print A4 Label Sheets
+                              <span>🖨️</span> A4 Label Sticker Sheets
                             </button>
                         </div>
                     </div>
@@ -6682,6 +7091,8 @@ export default function App() {
 
                 if (pendingAdminTarget === "fleet") {
                   setIsOwnerDashboardOpen(true);
+                } else if (pendingAdminTarget === "seo") {
+                  setIsSeoHubOpen(true);
                 } else {
                   setIsClaudeAgentsOpen(true);
                 }
@@ -6760,18 +7171,39 @@ export default function App() {
           isDarkMode={isDarkMode}
           onClose={() => setIsOwnerDashboardOpen(false)}
           showToast={showToast}
+          onOpenSeoHub={() => setIsSeoHubOpen(true)}
+          onOpenClaudeAgents={() => setIsClaudeAgentsOpen(true)}
         />
       )}
 
-      {/* 50 Claude Agents & Million Traffic Engine Suite */}
-      {isClaudeAgentsOpen && (
+      {/* 50 Claude Agents & Million Traffic Engine Suite (Owner Only: sukanta.singha786@gmail.com) */}
+      {isClaudeAgentsOpen && checkIsOwnerAuthenticated() && (
         <ClaudeAgentsSuite
           isDarkMode={isDarkMode}
           onClose={() => setIsClaudeAgentsOpen(false)}
           showToast={showToast}
           realSearchCount={realSearchCount}
           setRealSearchCount={setRealSearchCount}
+          onOpenSeoHub={() => setIsSeoHubOpen(true)}
+          onOpenOwnerDashboard={() => setIsOwnerDashboardOpen(true)}
         />
+      )}
+
+      {/* 2026 SEO Growth Hub & Million Traffic Engine (Owner Only: sukanta.singha786@gmail.com) */}
+      {isSeoHubOpen && checkIsOwnerAuthenticated() && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-5xl my-auto animate-scale-up max-h-[92vh] overflow-y-auto rounded-2xl shadow-2xl">
+            <SeoGrowthHub2026
+              isDarkMode={isDarkMode}
+              onClose={() => setIsSeoHubOpen(false)}
+              showToast={showToast}
+              realSearchCount={realSearchCount}
+              setRealSearchCount={setRealSearchCount}
+              onOpenClaudeAgents={() => setIsClaudeAgentsOpen(true)}
+              onOpenOwnerDashboard={() => setIsOwnerDashboardOpen(true)}
+            />
+          </div>
+        </div>
       )}
 
       {/* Enterprise Commercial Subscription Modal (SAC 998313) */}
@@ -6782,6 +7214,32 @@ export default function App() {
           showToast={showToast}
         />
       )}
+
+      {/* Canvas-based A4 Print Preview Sheet Grid Modal */}
+      {isPrintPreviewOpen && (
+        <PrintPreviewModal
+          isOpen={isPrintPreviewOpen}
+          onClose={() => setIsPrintPreviewOpen(false)}
+          isDarkMode={isDarkMode}
+          barcodeCanvas={currentType === "QR" ? qrCanvasRef.current : barcodeCanvasRef.current}
+          currentType={currentType}
+          userInput={userInput}
+          displayValue={displayValue}
+          foregroundColor={foregroundColor}
+          backgroundColor={backgroundColor}
+          showToast={showToast}
+        />
+      )}
+
+      {/* Viral Referral Program & VIP Rewards Modal */}
+      <ReferralModal
+        isOpen={isReferralModalOpen}
+        onClose={() => setIsReferralModalOpen(false)}
+        isDarkMode={isDarkMode}
+        showToast={showToast}
+        referralState={referralState}
+        onUpdateReferralState={updateReferralState}
+      />
 
     </div>
   );

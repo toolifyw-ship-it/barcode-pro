@@ -16,6 +16,8 @@ interface ClaudeAgentsSuiteProps {
   showToast: (msg: string) => void;
   realSearchCount: number;
   setRealSearchCount: React.Dispatch<React.SetStateAction<number>>;
+  onOpenSeoHub?: () => void;
+  onOpenOwnerDashboard?: () => void;
 }
 
 export const ClaudeAgentsSuite: React.FC<ClaudeAgentsSuiteProps> = ({
@@ -23,7 +25,9 @@ export const ClaudeAgentsSuite: React.FC<ClaudeAgentsSuiteProps> = ({
   onClose,
   showToast,
   realSearchCount,
-  setRealSearchCount
+  setRealSearchCount,
+  onOpenSeoHub,
+  onOpenOwnerDashboard
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>("overview");
   const [activeAgentId, setActiveAgentId] = useState<number>(1);
@@ -239,7 +243,35 @@ export const ClaudeAgentsSuite: React.FC<ClaudeAgentsSuiteProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {onOpenOwnerDashboard && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenOwnerDashboard();
+                }}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all min-h-[44px] cursor-pointer"
+                title="Open Fleet Command"
+              >
+                <span>🏢</span>
+                <span>Fleet Command</span>
+              </button>
+            )}
+
+            {onOpenSeoHub && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenSeoHub();
+                }}
+                className="px-3 py-2 bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all min-h-[44px] cursor-pointer"
+                title="Open SEO 2026 Hub"
+              >
+                <span>🚀</span>
+                <span>SEO 2026 Hub</span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 try {
@@ -252,7 +284,7 @@ export const ClaudeAgentsSuite: React.FC<ClaudeAgentsSuiteProps> = ({
               title="Lock Terminal & Log Out"
             >
               <span>🔒</span>
-              <span>Lock Terminal</span>
+              <span>Lock</span>
             </button>
 
             <button
@@ -336,29 +368,44 @@ export const ClaudeAgentsSuite: React.FC<ClaudeAgentsSuiteProps> = ({
               </div>
 
               {/* Urgency Batch Callout & Clickable Hashtags */}
-              <div className="p-4 rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-950/30 to-indigo-950/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="p-4 rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-950/30 via-purple-950/30 to-indigo-950/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-purple-600 text-white font-bold text-[10px] uppercase">
-                      OFF-PAGE URGENCY
+                    <span className="px-2 py-0.5 rounded bg-red-600 text-white font-black text-[10px] uppercase animate-pulse">
+                      URGENT • 4 SEATS LEFT
                     </span>
-                    <h4 className="text-sm font-bold text-white">Join 32nd Batch: Next-Gen E-Commerce Barcode Automation</h4>
+                    <h4 className="text-sm font-bold text-white">OFF-PAGE: Join 32th Batch Growth Syndicate</h4>
                   </div>
                   <p className="text-xs text-slate-300 mt-1">
-                    Free community cohort for Kirana & MSME owners in West Bengal & India.
+                    Direct syndication & backlink network for <strong>https://barcoderpro-zeta.vercel.app/</strong> to reach 15,000+ daily real visitors.
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {["#SEO", "#AEO", "#GEO"].map((tag) => (
                     <button
                       key={tag}
-                      onClick={() => showToast(`🔍 Filtered insights for ${tag}`)}
-                      className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-purple-400 border border-purple-500/30 text-xs font-bold transition-all min-h-[44px] cursor-pointer"
+                      onClick={() => {
+                        navigator.clipboard.writeText(tag);
+                        showToast(`🏷️ Copied ${tag} to clipboard!`);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-400/40 text-xs font-black transition-all min-h-[44px] cursor-pointer active:scale-95 flex items-center gap-1"
+                      title={`Click to copy ${tag}`}
                     >
-                      {tag}
+                      <span>🏷️</span>
+                      <span>{tag}</span>
                     </button>
                   ))}
+                  <button
+                    onClick={() => {
+                      const text = "Free online barcode & QR code generator with zero server latency! #SEO #AEO #GEO";
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent("https://barcoderpro-zeta.vercel.app/")}`, "_blank");
+                    }}
+                    className="w-11 h-11 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs min-h-[44px] min-w-[44px] cursor-pointer"
+                    title="Share with #SEO #AEO #GEO on X/Twitter"
+                  >
+                    𝕏
+                  </button>
                 </div>
               </div>
 
