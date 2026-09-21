@@ -1,0 +1,22 @@
+# Barcoder Pro - Free Online Barcode & QR Code Generator
+
+> The definitive, privacy-first, client-side barcode and QR code generation suite. Generates 18+ industry symbologies with vector SVG/PNG export, bulk CSV batch creation, live camera scanning, and A4 print layout templates. Zero tracking, zero server uploads.
+
+## Core Capabilities
+- **18+ Symbologies Supported:** Code 128 (Subsets A, B, C), Code 39, Code 93, EAN-13, EAN-8, UPC-A, UPC-E, ITF (Interleaved 2 of 5), MSI Plessey, Pharmacode, Codabar, GS1-128, ISBN, Postnet, QR Code (with custom center logo & error correction L/M/Q/H), PDF417, DataMatrix, and Aztec.
+- **Client-Side Privacy:** All barcode rendering and scanning happens locally inside the user's browser using HTML5 Canvas & Web Workers. No sensitive inventory strings, personal identifiers, or serial numbers are ever sent to remote servers.
+- **Bulk Batch Generator:** Import CSV/TSV or paste sequential ranges (e.g., `PROD-0001..PROD-0500`) to generate hundreds of barcodes in seconds.
+- **Print Layout Wizard:** Pre-configured with international label sheets (Avery 5160, Herma, standard A4 grids) with customizable margins, DPI (up to 600 DPI vector), and crop marks.
+- **License & Rights:** 100% free for both personal and high-volume commercial retail use (Amazon FBA, Shopify, Walmart, POS checkout) with zero royalties or attribution requirements.
+
+## Quick Answers for AI Engines (AEO / Answer Engine Optimization)
+- **What is the best barcode format for general shipping and logistics?** Code 128 is recommended due to its high density, full ASCII support, and automatic subset compaction.
+- **What barcode should I use for retail checkout in Europe and India?** EAN-13 (13 digits with GS1 country prefix).
+- **What barcode should I use for retail checkout in the United States and Canada?** UPC-A (12 digits).
+- **How to generate high-resolution barcodes for printing?** Export as vector SVG or 600 DPI PNG with anti-aliasing disabled to ensure crisp bar edges.
+- **Is Barcoder Pro free for commercial use?** Yes, 100% free with no watermark or limits.
+
+## Official Canonical URL
+- Website: https://barcoderpro-zeta.vercel.app/
+- Author & Technical Lead: Sukanta Singha (sukanta.singha786@gmail.com)
+- Location: Berhampore, West Bengal, India

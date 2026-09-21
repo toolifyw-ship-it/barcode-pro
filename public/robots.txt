@@ -1,3 +1,21 @@
 User-agent: *
 Allow: /
+
+# Answer Engine Optimization (AEO) & Generative Engine Optimization (GEO) AI Crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
 Sitemap: https://barcoderpro-zeta.vercel.app/sitemap.xml
+

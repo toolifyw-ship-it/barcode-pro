@@ -40,6 +40,41 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Owner Authentication Protection (sukanta.singha786@gmail.com)
+  const [isOwnerUnlocked, setIsOwnerUnlocked] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("owner_access_sukanta") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [ownerKeyInput, setOwnerKeyInput] = useState<string>("");
+  const [ownerKeyError, setOwnerKeyError] = useState<string>("");
+
+  const handleOwnerUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = ownerKeyInput.trim().toLowerCase();
+    if (clean === "sukanta.singha786@gmail.com" || clean === "2026" || clean === "sukanta786") {
+      try {
+        localStorage.setItem("owner_access_sukanta", "true");
+      } catch {}
+      setIsOwnerUnlocked(true);
+      setOwnerKeyError("");
+      showToast("👑 Verified Sukanta Singha! Access to Owner Resource unlocked.");
+    } else {
+      setOwnerKeyError("❌ Unauthorized Access. Only owner sukanta.singha786@gmail.com is permitted.");
+      showToast("⛔ Access Denied: Unauthorized email/key.");
+    }
+  };
+
+  const handleOwnerLock = () => {
+    try {
+      localStorage.removeItem("owner_access_sukanta");
+    } catch {}
+    setIsOwnerUnlocked(false);
+    showToast("🔒 Owner mode locked successfully. Data protected.");
+  };
+
   const bgCard = isDarkMode ? "bg-slate-900/50 border-slate-800 text-slate-300" : "bg-white border-slate-200 text-slate-700 shadow-sm";
   const bgSubCard = isDarkMode ? "bg-slate-950/80 border-slate-850" : "bg-slate-50 border-slate-200";
   const titleColor = isDarkMode ? "text-slate-100" : "text-slate-900";
@@ -258,8 +293,72 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
         );
 
       case "/author":
+        if (!isOwnerUnlocked) {
+          return (
+            <div className="max-w-lg mx-auto my-6 p-6 sm:p-8 rounded-3xl border bg-slate-950/90 border-blue-500/40 shadow-2xl text-center space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-3xl shadow-inner">
+                🛡️
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-black tracking-widest text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
+                  Protected Owner Data • Scraping Shield Active
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-white mt-3">
+                  Author Profile Restricted
+                </h3>
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                  As configured by the platform administrator, personal developer credentials and biography are protected from competitor data theft, automated scrapers, and malicious harvesting. <strong>Only the verified site owner (sukanta.singha786@gmail.com)</strong> can view this profile.
+                </p>
+              </div>
+
+              <form onSubmit={handleOwnerUnlock} className="space-y-3 pt-2">
+                <input
+                  type="text"
+                  placeholder="Enter Owner Email (sukanta.singha786@gmail.com)"
+                  value={ownerKeyInput}
+                  onChange={(e) => setOwnerKeyInput(e.target.value)}
+                  className="w-full px-4 py-3 text-xs rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-center font-mono"
+                />
+                {ownerKeyError && (
+                  <p className="text-[11px] font-bold text-rose-400">{ownerKeyError}</p>
+                )}
+                <button
+                  type="submit"
+                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg cursor-pointer"
+                >
+                  🔓 Authenticate as sukanta.singha786@gmail.com
+                </button>
+              </form>
+
+              <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-center gap-4 text-xs">
+                <button onClick={() => navigate("/")} className="text-blue-400 hover:underline cursor-pointer">
+                  ← Return to Free Generator
+                </button>
+                <button onClick={() => navigate("/contact-us")} className="text-slate-400 hover:underline cursor-pointer">
+                  Contact Support
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="space-y-6 text-xs sm:text-sm leading-relaxed">
+            <div className="p-3.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 text-base">👑</span>
+                <span className="text-xs font-bold text-emerald-300">
+                  Verified Site Owner: <strong>sukanta.singha786@gmail.com</strong> (Owner Shield Active)
+                </span>
+              </div>
+              <button
+                onClick={handleOwnerLock}
+                className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+              >
+                🔒 Lock Session
+              </button>
+            </div>
+
             <div className="flex flex-col sm:flex-row items-center gap-6 p-6 rounded-2rem border bg-blue-600/10 border-blue-500/20">
               <div className="w-20 h-20 rounded-2xl bg-blue-600 flex items-center justify-center text-3xl font-black text-white shrink-0 shadow-lg">
                 SS
@@ -282,9 +381,73 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
         );
 
       case "/sitemap":
+        if (!isOwnerUnlocked) {
+          return (
+            <div className="max-w-lg mx-auto my-6 p-6 sm:p-8 rounded-3xl border bg-slate-950/90 border-blue-500/40 shadow-2xl text-center space-y-4">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-3xl shadow-inner">
+                🗺️
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-black tracking-widest text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
+                  Protected System Resource • Internal Index
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-white mt-3">
+                  HTML Sitemap Protected
+                </h3>
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                  To eliminate automated mass crawling and prevent proprietary directory harvesting by competitor scrapers, the comprehensive HTML Sitemap is restricted exclusively to the site owner (<strong>sukanta.singha786@gmail.com</strong>).
+                </p>
+              </div>
+
+              <form onSubmit={handleOwnerUnlock} className="space-y-3 pt-2">
+                <input
+                  type="text"
+                  placeholder="Enter Owner Email (sukanta.singha786@gmail.com)"
+                  value={ownerKeyInput}
+                  onChange={(e) => setOwnerKeyInput(e.target.value)}
+                  className="w-full px-4 py-3 text-xs rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 text-center font-mono"
+                />
+                {ownerKeyError && (
+                  <p className="text-[11px] font-bold text-rose-400">{ownerKeyError}</p>
+                )}
+                <button
+                  type="submit"
+                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg cursor-pointer"
+                >
+                  🔓 Authenticate as sukanta.singha786@gmail.com
+                </button>
+              </form>
+
+              <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-center gap-4 text-xs">
+                <button onClick={() => navigate("/")} className="text-blue-400 hover:underline cursor-pointer">
+                  ← Return to Free Generator
+                </button>
+                <button onClick={() => navigate("/blog")} className="text-slate-400 hover:underline cursor-pointer">
+                  View Technical Blog
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="space-y-6 text-xs sm:text-sm leading-relaxed">
-            <h3 className="text-base font-extrabold text-blue-500 mb-2">HTML Site Directory & Full Index</h3>
+            <div className="p-3.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 text-base">👑</span>
+                <span className="text-xs font-bold text-emerald-300">
+                  Verified Site Owner: <strong>sukanta.singha786@gmail.com</strong> (Full Internal Index Unlocked)
+                </span>
+              </div>
+              <button
+                onClick={handleOwnerLock}
+                className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+              >
+                🔒 Lock Session
+              </button>
+            </div>
+
+            <h3 className="text-base font-extrabold text-blue-500 mb-2">HTML Site Directory & Full Internal Index</h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className={`p-4 rounded-xl border ${bgSubCard} space-y-2`}>
@@ -325,7 +488,6 @@ export const StaticPages: React.FC<StaticPagesProps> = ({
                   <li><button onClick={() => navigate("/editorial-policy")} className="hover:underline text-left">Editorial Policy</button></li>
                   <li><button onClick={() => navigate("/disclaimer")} className="hover:underline text-left">Print Verification Disclaimer</button></li>
                   <li><button onClick={() => navigate("/cookies-policy")} className="hover:underline text-left">Cookies Policy</button></li>
-                  <li><button onClick={() => navigate("/author")} className="hover:underline text-left">Author Profile</button></li>
                   <li><button onClick={() => navigate("/contact-us")} className="hover:underline text-left">Contact Support</button></li>
                   <li><button onClick={() => navigate("/feedback")} className="hover:underline text-left">⭐ Reviews & Feedback</button></li>
                 </ul>

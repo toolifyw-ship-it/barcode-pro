@@ -28,6 +28,7 @@ import { SeoGrowthHub2026 } from "./components/SeoGrowthHub2026";
 import { PrintPreviewModal } from "./components/PrintPreviewModal";
 import { ReferralModal, ReferralState } from "./components/ReferralModal";
 import { sanitizeBarcodeInput, sanitizeBulkInput, escapeHtml } from "./lib/sanitizer";
+import { AdsterraRectangle300x250, AdsterraResponsiveBanner, AdsterraNativeBanner } from "./components/AdsterraBanners";
 
 interface BarcodeType {
   id: string;
@@ -944,6 +945,38 @@ export default function App() {
   const [isClaudeAgentsOpen, setIsClaudeAgentsOpen] = useState<boolean>(false);
   const [isSeoHubOpen, setIsSeoHubOpen] = useState<boolean>(false);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState<boolean>(false);
+
+  // Owner Authentication Protection (sukanta.singha786@gmail.com)
+  const [isOwnerAuth, setIsOwnerAuth] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("owner_access_sukanta") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const handlePromptOwnerLogin = () => {
+    const key = window.prompt("Owner Security Shield: Enter your Owner Email (sukanta.singha786@gmail.com) or Master PIN to unlock Author Profile & HTML Sitemap:");
+    if (!key) return;
+    const clean = key.trim().toLowerCase();
+    if (clean === "sukanta.singha786@gmail.com" || clean === "2026" || clean === "sukanta786") {
+      try {
+        localStorage.setItem("owner_access_sukanta", "true");
+      } catch {}
+      setIsOwnerAuth(true);
+      showToast("👑 Verified Sukanta Singha! Owner links unlocked.");
+    } else {
+      showToast("⛔ Unauthorized Access. Restricted to sukanta.singha786@gmail.com.");
+    }
+  };
+
+  const handleOwnerLogout = () => {
+    try {
+      localStorage.removeItem("owner_access_sukanta");
+    } catch {}
+    setIsOwnerAuth(false);
+    showToast("🔒 Owner mode locked successfully. Data protected.");
+  };
 
   // Viral Referral & Customer Reward State (Double-Sided Perks)
   const [isReferralModalOpen, setIsReferralModalOpen] = useState<boolean>(false);
@@ -6048,6 +6081,9 @@ export default function App() {
                     </div>
                 </section>
 
+                {/* Adsterra 300x250 Medium Rectangle (Code 1) */}
+                <AdsterraRectangle300x250 />
+
                 {/* Expandable SEO Details panel */}
                 <div className="seo-collapsible">
                     <button 
@@ -6140,8 +6176,14 @@ export default function App() {
             </div>
         </section>
 
+        {/* Adsterra Responsive Banner (Code 2 Mobile 320x50, Code 3 Desktop 728x90) */}
+        <AdsterraResponsiveBanner />
+
         {/* Technical Educational Manual & AdSense Content Core */}
         <EducationalGuide isDarkMode={isDarkMode} navigate={navigate} />
+
+        {/* Adsterra Native Recommendations (Code 4) */}
+        <AdsterraNativeBanner />
 
         {/* Affiliate SEO Global Network marquee links */}
         <div className={`mt-10 overflow-hidden border-y py-5 rounded-xl transition-all duration-300 ${
@@ -6284,18 +6326,13 @@ export default function App() {
               </ul>
             </div>
 
-            {/* Column 4: Company & Trust */}
+            {/* Column 4: Company & Support */}
             <div className="space-y-3">
               <h4 className="text-xs font-extrabold uppercase tracking-widest text-blue-400">Company & Support</h4>
               <ul className="space-y-2 text-xs font-medium text-slate-400">
                 <li>
                   <button onClick={() => navigate("/about-us")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
-                    About Us
-                  </button>
-                </li>
-                <li>
-                  <button onClick={() => navigate("/author")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
-                    👨‍💻 Author Profile
+                    About Us & Mission
                   </button>
                 </li>
                 <li>
@@ -6304,15 +6341,60 @@ export default function App() {
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => navigate("/feedback")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
-                    ⭐ User Feedback & Reviews
+                  <button onClick={() => navigate("/faq")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                    Help Center & FAQ
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => navigate("/sitemap")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
-                    🗺️ HTML Sitemap
+                  <button onClick={() => navigate("/feedback")} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                    ⭐ User Feedback & Ratings
                   </button>
                 </li>
+                <li>
+                  <button onClick={() => setIsSubscriptionModalOpen(true)} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                    💎 Commercial License Plans
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => setIsReferralModalOpen(true)} className="hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 text-left">
+                    🎁 Referral Rewards Program
+                  </button>
+                </li>
+
+                {/* Owner Protected Resources (sukanta.singha786@gmail.com) */}
+                {isOwnerAuth ? (
+                  <li className="pt-2 border-t border-slate-800 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">👑 Owner Portal Active</span>
+                      <button onClick={handleOwnerLogout} className="text-[10px] text-slate-400 hover:text-rose-400 cursor-pointer">Lock</button>
+                    </div>
+                    <div>
+                      <button onClick={() => navigate("/author")} className="hover:text-amber-300 transition-colors cursor-pointer bg-transparent border-none p-0 text-left text-amber-200 text-xs">
+                        👨‍💻 Author Profile (Owner Only)
+                      </button>
+                    </div>
+                    <div>
+                      <button onClick={() => navigate("/sitemap")} className="hover:text-amber-300 transition-colors cursor-pointer bg-transparent border-none p-0 text-left text-amber-200 text-xs">
+                        🗺️ HTML Sitemap (Owner Only)
+                      </button>
+                    </div>
+                    <div>
+                      <button onClick={() => setIsOwnerDashboardOpen(true)} className="hover:text-emerald-300 transition-colors cursor-pointer bg-transparent border-none p-0 text-left text-emerald-300 text-xs font-bold">
+                        ⚙️ Owner Command Center
+                      </button>
+                    </div>
+                  </li>
+                ) : (
+                  <li className="pt-2 border-t border-slate-800">
+                    <button 
+                      onClick={handlePromptOwnerLogin} 
+                      className="hover:text-amber-300 transition-colors cursor-pointer bg-transparent border-none p-0 text-left text-[11px] text-slate-500 hover:text-slate-300 flex items-center gap-1"
+                      title="Only verified site owner can access author credentials & site directory"
+                    >
+                      <span>🔒</span> Owner Portal (sukanta.singha786@gmail.com)
+                    </button>
+                  </li>
+                )}
               </ul>
             </div>
 
