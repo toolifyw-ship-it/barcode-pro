@@ -20,8 +20,11 @@ export const AdsterraRectangle300x250: React.FC<AdProps> = ({ className = "" }) 
     <html lang="en">
     <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <base target="_blank">
       <style>
-        body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; overflow: hidden; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; overflow: hidden; width: 100%; height: 100%; }
       </style>
     </head>
     <body>
@@ -52,8 +55,7 @@ export const AdsterraRectangle300x250: React.FC<AdProps> = ({ className = "" }) 
           height={250}
           frameBorder={0}
           scrolling="no"
-          className="border-0 overflow-hidden max-w-full"
-          sandbox="allow-scripts allow-same-origin allow-popups"
+          className="border-0 overflow-hidden max-w-full w-full h-full"
           loading="lazy"
         />
       </div>
@@ -73,8 +75,11 @@ export const AdsterraResponsiveBanner: React.FC<AdProps> = ({ className = "" }) 
     <html lang="en">
     <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <base target="_blank">
       <style>
-        body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; overflow: hidden; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; overflow: hidden; width: 100%; height: 100%; }
       </style>
     </head>
     <body>
@@ -97,8 +102,11 @@ export const AdsterraResponsiveBanner: React.FC<AdProps> = ({ className = "" }) 
     <html lang="en">
     <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <base target="_blank">
       <style>
-        body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; overflow: hidden; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background: transparent; overflow: hidden; width: 100%; height: 100%; }
       </style>
     </head>
     <body>
@@ -131,8 +139,7 @@ export const AdsterraResponsiveBanner: React.FC<AdProps> = ({ className = "" }) 
           height={50}
           frameBorder={0}
           scrolling="no"
-          className="border-0 overflow-hidden max-w-full"
-          sandbox="allow-scripts allow-same-origin allow-popups"
+          className="border-0 overflow-hidden max-w-full w-full h-full"
           loading="lazy"
         />
       </div>
@@ -146,8 +153,7 @@ export const AdsterraResponsiveBanner: React.FC<AdProps> = ({ className = "" }) 
           height={90}
           frameBorder={0}
           scrolling="no"
-          className="border-0 overflow-hidden max-w-full"
-          sandbox="allow-scripts allow-same-origin allow-popups"
+          className="border-0 overflow-hidden max-w-full w-full h-full"
           loading="lazy"
         />
       </div>

@@ -530,6 +530,24 @@ img {
   border: 1px dashed rgba(148, 163, 184, 0.2);
 }
 
+#container-7e837b037212e65acf251eda0a3a4f79:empty {
+  min-height: 80px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#container-7e837b037212e65acf251eda0a3a4f79:empty::after {
+  content: 'Partner Sponsored Content';
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.5;
+}
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }

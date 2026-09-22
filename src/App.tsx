@@ -4569,8 +4569,26 @@ export default function App() {
                 </div>
             </div>
             
-            {/* Day / Night dynamic switcher & Referral controls - Clean compact design */}
+            {/* Day / Night dynamic switcher, Bookmark & Referral controls - Clean compact design */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(window.location.origin);
+                      showToast("⭐ URL Copied! Press Ctrl+D (or ⌘+D on Mac) to bookmark Barcoder Pro");
+                    } else {
+                      showToast("⭐ Press Ctrl+D (or ⌘+D on Mac) to bookmark Barcoder Pro");
+                    }
+                  }}
+                  className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full border transition-all text-[10px] sm:text-[11px] font-bold select-none cursor-pointer whitespace-nowrap min-h-[32px] sm:min-h-[34px] shadow-sm bg-slate-800/80 hover:bg-slate-700 text-amber-300 border-amber-500/30 active:scale-95"
+                  title="Bookmark Barcoder Pro for instant daily access (Ctrl+D)"
+                  aria-label="Bookmark Barcoder Pro"
+                >
+                  <span>⭐</span>
+                  <span>Bookmark</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setIsReferralModalOpen(true)}
