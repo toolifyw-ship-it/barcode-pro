@@ -71,7 +71,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
       {
         id: "1",
         name: "BarcoderPro",
-        domain: "barcoderpro-zeta.vercel.app",
+        domain: "barcode-pro-zeta.vercel.app",
         incomeModel: "adsense_only",
         todayCustomers: realTodayCustomers,
         incomeToday: realIncomeToday,

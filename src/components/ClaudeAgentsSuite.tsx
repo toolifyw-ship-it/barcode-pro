@@ -377,7 +377,7 @@ export const ClaudeAgentsSuite: React.FC<ClaudeAgentsSuiteProps> = ({
                     <h4 className="text-sm font-bold text-white">OFF-PAGE: Join 32th Batch Growth Syndicate</h4>
                   </div>
                   <p className="text-xs text-slate-300 mt-1">
-                    Direct syndication & backlink network for <strong>https://barcoderpro-zeta.vercel.app/</strong> to reach 15,000+ daily real visitors.
+                    Direct syndication & backlink network for <strong>https://barcode-pro-zeta.vercel.app/</strong> to reach 15,000+ daily real visitors.
                   </p>
                 </div>
 
@@ -399,7 +399,7 @@ export const ClaudeAgentsSuite: React.FC<ClaudeAgentsSuiteProps> = ({
                   <button
                     onClick={() => {
                       const text = "Free online barcode & QR code generator with zero server latency! #SEO #AEO #GEO";
-                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent("https://barcoderpro-zeta.vercel.app/")}`, "_blank");
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent("https://barcode-pro-zeta.vercel.app/")}`, "_blank");
                     }}
                     className="w-11 h-11 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-xs min-h-[44px] min-w-[44px] cursor-pointer"
                     title="Share with #SEO #AEO #GEO on X/Twitter"

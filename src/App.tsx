@@ -29,6 +29,8 @@ import { PrintPreviewModal } from "./components/PrintPreviewModal";
 import { ReferralModal, ReferralState } from "./components/ReferralModal";
 import { sanitizeBarcodeInput, sanitizeBulkInput, escapeHtml } from "./lib/sanitizer";
 import { AdsterraRectangle300x250, AdsterraResponsiveBanner, AdsterraNativeBanner } from "./components/AdsterraBanners";
+import { CookieConsentBanner } from "./components/CookieConsentBanner";
+import { AdBlockerNotice } from "./components/AdBlockerNotice";
 
 interface BarcodeType {
   id: string;
@@ -464,20 +466,6 @@ export default function App() {
   const isBulkPath = (p: string) => p === "/bulk-barcode-generator";
 
   const [userInput, setUserInput] = useState<string>("1000202856");
-  const [showCookieBanner, setShowCookieBanner] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("cookie_consent_accepted") !== "true";
-    } catch {
-      return true;
-    }
-  });
-
-  const acceptCookies = () => {
-    try {
-      localStorage.setItem("cookie_consent_accepted", "true");
-    } catch {}
-    setShowCookieBanner(false);
-  };
 
   const [currentType, setCurrentType] = useState<string>("CODE128");
   const [isTypeModalOpen, setIsTypeModalOpen] = useState<boolean>(false);
@@ -1568,7 +1556,7 @@ export default function App() {
     } else if (typeId === "ITF") {
       setUserInput("12345678");
     } else if (typeId === "QR") {
-      setUserInput("https://barcoderpro-zeta.vercel.app/");
+      setUserInput("https://barcode-pro-zeta.vercel.app/");
     } else if (typeId === "PDF417") {
       setUserInput("PDF417-STANDARD-DATA");
     } else if (typeId === "DATAMATRIX") {
@@ -2045,7 +2033,7 @@ export default function App() {
       else if (currentType === "GS1_128") rawData = "(01)00012345678905";
       else if (currentType === "ISBN") rawData = "9780306406157";
       else if (currentType === "POSTNET") rawData = "12345";
-      else if (currentType === "QR") rawData = "https://barcoderpro-zeta.vercel.app/";
+      else if (currentType === "QR") rawData = "https://barcode-pro-zeta.vercel.app/";
       else if (currentType === "PDF417") rawData = "PDF417-STANDARD-DATA";
       else if (currentType === "DATAMATRIX") rawData = "DATAMATRIX-DATA-2026";
       else if (currentType === "AZTEC") rawData = "AZTEC-TICKET-99";
@@ -3079,7 +3067,7 @@ export default function App() {
       const randomTexts = [
         { text: "753894012583", format: "EAN13" },
         { text: "BARCODER-PRO-2026", format: "CODE128" },
-        { text: "https://barcoderpro-zeta.vercel.app/", format: "QR" },
+        { text: "https://barcode-pro-zeta.vercel.app/", format: "QR" },
         { text: "049000028941", format: "UPC" },
         { text: "SYS-ID-LOGIS-90", format: "CODE128" }
       ];
@@ -3089,7 +3077,7 @@ export default function App() {
       if (fName.includes("CODE128")) {
         decoded = { text: "1000202856", format: "CODE128" };
       } else if (fName.includes("QR")) {
-        decoded = { text: "https://barcoderpro-zeta.vercel.app/", format: "QR" };
+        decoded = { text: "https://barcode-pro-zeta.vercel.app/", format: "QR" };
       } else if (fName.includes("UPC")) {
         decoded = { text: "012000042416", format: "UPC" };
       } else if (fName.includes("EAN")) {
@@ -3265,7 +3253,7 @@ export default function App() {
                 </button>
 
                 <button
-                  onClick={() => triggerPresetScan("QR", "https://barcoderpro-zeta.vercel.app/")}
+                  onClick={() => triggerPresetScan("QR", "https://barcode-pro-zeta.vercel.app/")}
                   className={`p-3 rounded-lg border text-left text-xs font-semibold cursor-pointer transition-all ${
                     isDarkMode ? "bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-900" : "bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 shadow-xs"
                   }`}
@@ -4623,6 +4611,9 @@ export default function App() {
             </div>
         </div>
       </header>
+ 
+      {/* Lightweight Non-Intrusive Ad-Blocker Alert Banner */}
+      <AdBlockerNotice />
 
       {/* Main page content body */}
       <main className="max-w-6xl w-full mx-auto px-3 sm:px-6 py-6 sm:py-8 flex-1" role="main">
@@ -4778,7 +4769,7 @@ export default function App() {
                         <meta itemProp="operatingSystem" content="All" />
                         <meta itemProp="browserRequirements" content="Requires HTML5 Canvas, modern web browser, and JavaScript support" />
                         <meta itemProp="featureList" content="Generates high-resolution Code 128, EAN-13, EAN-8, UPC-A, QR Codes with custom logo branding frames, PDF417, and standard retail barcodes." />
-                        <meta itemProp="url" content="https://barcoderpro-zeta.vercel.app/" />
+                        <meta itemProp="url" content="https://barcode-pro-zeta.vercel.app/" />
                         <div className="hidden" style={{ display: "none" }} itemProp="description">
                           Barcoder Pro is the premium free online Barcode Generator & QR Code Maker. Designed as a high-performance alternative to services like barcode.tec-it.com, it supports instant vector rendering, ornamental branding frames, custom logos, and dynamic scannability ratings.
                         </div>
@@ -4834,7 +4825,7 @@ export default function App() {
                           <meta itemProp="operatingSystem" content="All" />
                           <meta itemProp="browserRequirements" content="Requires HTML5 Canvas, modern web browser, and JavaScript support" />
                           <meta itemProp="featureList" content="Generates high-resolution Code 128, EAN-13, EAN-8, UPC-A, QR Codes with custom logo branding frames, PDF417, and standard retail barcodes." />
-                          <meta itemProp="url" content="https://barcoderpro-zeta.vercel.app/" />
+                          <meta itemProp="url" content="https://barcode-pro-zeta.vercel.app/" />
                           <div className="hidden" style={{ display: "none" }} itemProp="description">
                             Barcoder Pro is the premium free online Barcode Generator & QR Code Maker. Designed as a high-performance alternative to services like barcode.tec-it.com, it supports instant vector rendering, ornamental branding frames, custom logos, and dynamic scannability ratings.
                           </div>
@@ -7046,78 +7037,11 @@ export default function App() {
         </div>
       )}
 
-      {/* Premium Cookie Consent Banner for GDPR / AdSense with Multi-Device Layout & Cut Option */}
-      {showCookieBanner && (
-        <div 
-          className={`fixed bottom-3 left-3 right-3 sm:bottom-4 sm:left-auto sm:right-4 sm:max-w-md lg:bottom-6 lg:right-6 lg:max-w-md p-4 sm:p-5 rounded-2xl shadow-2xl border z-[2000] backdrop-blur-md animate-fade transition-all duration-300 relative ${
-            isDarkMode 
-              ? "bg-slate-900/95 border-slate-700/80 text-slate-100 shadow-black/60" 
-              : "bg-white/95 border-slate-200 text-slate-800 shadow-slate-400/30"
-          }`}
-          role="dialog"
-          aria-labelledby="cookie-title"
-          aria-describedby="cookie-desc"
-        >
-          {/* Dedicated Top-Right Cut / Dismiss Option */}
-          <button
-            onClick={() => setShowCookieBanner(false)}
-            className={`absolute top-3.5 right-3.5 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all cursor-pointer select-none ${
-              isDarkMode 
-                ? "bg-slate-800/90 hover:bg-slate-750 text-slate-400 hover:text-white" 
-                : "bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900"
-            }`}
-            aria-label="Cut / Close notification"
-            title="Cut notification (✕)"
-          >
-            ✕
-          </button>
-
-          <div className="flex items-start gap-3 pr-6">
-            <span className="text-xl sm:text-2xl mt-0.5 shrink-0 select-none">🍪</span>
-            <div className="flex-1">
-              <h3 id="cookie-title" className="text-xs font-black uppercase tracking-wider text-blue-500 mb-1">
-                Cookie Consent & Privacy
-              </h3>
-              <p id="cookie-desc" className="text-[11px] sm:text-xs leading-relaxed text-slate-400 mb-4">
-                We use non-intrusive cookies to serve ads via Google AdSense and support server costs. Learn more in our{" "}
-                <button 
-                  onClick={() => {
-                    setActiveDropdown("privacy");
-                  }} 
-                  className="text-blue-400 hover:underline inline-block font-semibold bg-transparent border-none p-0 cursor-pointer"
-                >
-                  Privacy Policy
-                </button>{" "}
-                and{" "}
-                <button 
-                  onClick={() => {
-                    setActiveDropdown("terms");
-                  }} 
-                  className="text-blue-400 hover:underline inline-block font-semibold bg-transparent border-none p-0 cursor-pointer"
-                >
-                  Terms of Service
-                </button>.
-              </p>
-              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap sm:flex-nowrap">
-                <button 
-                  onClick={acceptCookies} 
-                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] sm:text-[11px] uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-blue-600/20 active:scale-95 min-h-[44px] flex items-center justify-center"
-                >
-                  Accept All
-                </button>
-                <button 
-                  onClick={() => setShowCookieBanner(false)} 
-                  className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-bold text-[10px] sm:text-[11px] uppercase tracking-wider transition-all cursor-pointer min-h-[44px] flex items-center justify-center ${
-                    isDarkMode ? "bg-slate-800 text-slate-300 hover:bg-slate-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Enterprise Cookie Consent & Privacy Banner (Modeled precisely after screenshot) */}
+      <CookieConsentBanner 
+        onOpenPrivacy={() => setActiveDropdown("privacy")} 
+        onOpenTerms={() => setActiveDropdown("terms")} 
+      />
 
       {/* Dynamic clipboards toasts alerts feedback indicator with responsive positioning & cut option */}
       {toastMessage && (

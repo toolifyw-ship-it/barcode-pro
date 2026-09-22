@@ -17,6 +17,6 @@
 - **Is Barcoder Pro free for commercial use?** Yes, 100% free with no watermark or limits.
 
 ## Official Canonical URL
-- Website: https://barcoderpro-zeta.vercel.app/
+- Website: https://barcode-pro-zeta.vercel.app/
 - Author & Technical Lead: Sukanta Singha (sukanta.singha786@gmail.com)
 - Location: Berhampore, West Bengal, India

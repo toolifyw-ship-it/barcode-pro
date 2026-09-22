@@ -190,7 +190,7 @@ export const SeoGrowthHub2026: React.FC<SeoGrowthHub2026Props> = ({
 
   const shareToTwitter = (tag: string) => {
     const text = `Generate 18+ free barcodes & QR codes with zero server latency on Barcoder Pro! ${tag} #RetailTech`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent("https://barcoderpro-zeta.vercel.app/")}`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent("https://barcode-pro-zeta.vercel.app/")}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -769,7 +769,7 @@ export const SeoGrowthHub2026: React.FC<SeoGrowthHub2026Props> = ({
                 </span>
               </div>
               <p className={`text-xs leading-relaxed ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
-                The 32th Batch Organic Backlink & Traffic Syndicate focuses on driving high-intent retail, logistics, and kirana store owners to <strong>https://barcoderpro-zeta.vercel.app/</strong>. Even without a .com or .in domain, programmatic indexation and syndication can generate 15k+ daily users.
+                The 32th Batch Organic Backlink & Traffic Syndicate focuses on driving high-intent retail, logistics, and kirana store owners to <strong>https://barcode-pro-zeta.vercel.app/</strong>. Even without a .com or .in domain, programmatic indexation and syndication can generate 15k+ daily users.
               </p>
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -843,7 +843,7 @@ export const SeoGrowthHub2026: React.FC<SeoGrowthHub2026Props> = ({
                 </div>
                 <button
                   onClick={() => {
-                    const bioText = "Barcoder Pro (https://barcoderpro-zeta.vercel.app/) - 100% free, private browser barcode and QR code generator with zero data collection. Created by Sukanta Singha.";
+                    const bioText = "Barcoder Pro (https://barcode-pro-zeta.vercel.app/) - 100% free, private browser barcode and QR code generator with zero data collection. Created by Sukanta Singha.";
                     navigator.clipboard?.writeText(bioText);
                     showToast("📋 Profile Bio copied to clipboard!");
                   }}
@@ -905,7 +905,7 @@ export const SeoGrowthHub2026: React.FC<SeoGrowthHub2026Props> = ({
             }`}>
               <h4 className="font-bold text-sm text-blue-400">Tactical Off-Page Link Building for Vercel Subdomain</h4>
               <ul className="space-y-2 list-disc list-inside text-slate-400">
-                <li><strong>GitHub Open Source Release:</strong> Publish the client-side Barcoder Pro engine repo with a clean dofollow backlink to <code>https://barcoderpro-zeta.vercel.app/</code>.</li>
+                <li><strong>GitHub Open Source Release:</strong> Publish the client-side Barcoder Pro engine repo with a clean dofollow backlink to <code>https://barcode-pro-zeta.vercel.app/</code>.</li>
                 <li><strong>ProductHunt &amp; Dev.to Launch:</strong> Post technical showcase &quot;How I built a 0ms serverless barcode generator in React&quot;.</li>
                 <li><strong>Indian Retail &amp; GST Forum Discussions:</strong> Share solution guides on IndiaMART seller communities, Amazon FBA Seller Central forums, and Vyapar app groups.</li>
                 <li><strong>Google Business Profile (Berhampore):</strong> Map technical services entity with verified NAP citations.</li>
@@ -989,7 +989,7 @@ export const SeoGrowthHub2026: React.FC<SeoGrowthHub2026Props> = ({
                     <button
                       onClick={() =>
                         handleCopyHookScript(
-                          "Stop paying for barcode software! Go to barcoderpro-zeta.vercel.app, choose Code 128, paste your product IDs, and click Bulk PDF. You get 500 print-ready barcodes in 10 seconds for $0. Link in bio! #SEO #Retail"
+                          "Stop paying for barcode software! Go to barcode-pro-zeta.vercel.app, choose Code 128, paste your product IDs, and click Bulk PDF. You get 500 print-ready barcodes in 10 seconds for $0. Link in bio! #SEO #Retail"
                         )
                       }
                       className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer min-h-[44px]"
@@ -998,7 +998,7 @@ export const SeoGrowthHub2026: React.FC<SeoGrowthHub2026Props> = ({
                     </button>
                   </div>
                   <p className={`text-xs italic leading-relaxed ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
-                    &quot;Stop paying for barcode software! Go to barcoderpro-zeta.vercel.app, choose Code 128, paste your product IDs, and click Bulk PDF. You get 500 print-ready barcodes in 10 seconds for $0. Link in bio!&quot;
+                    &quot;Stop paying for barcode software! Go to barcode-pro-zeta.vercel.app, choose Code 128, paste your product IDs, and click Bulk PDF. You get 500 print-ready barcodes in 10 seconds for $0. Link in bio!&quot;
                   </p>
                 </div>
 
@@ -1011,7 +1011,7 @@ export const SeoGrowthHub2026: React.FC<SeoGrowthHub2026Props> = ({
                     <button
                       onClick={() =>
                         handleCopyHookScript(
-                          "Amazon sellers don't want you to know this: You don't need paid label software. Barcoder Pro generates GS1-128 and ITF carton barcodes right in your browser with zero data collection. Search 'Barcoder Pro' or open barcoderpro-zeta.vercel.app! #AEO #AmazonFBA"
+                          "Amazon sellers don't want you to know this: You don't need paid label software. Barcoder Pro generates GS1-128 and ITF carton barcodes right in your browser with zero data collection. Search 'Barcoder Pro' or open barcode-pro-zeta.vercel.app! #AEO #AmazonFBA"
                         )
                       }
                       className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer min-h-[44px]"
@@ -1059,7 +1059,7 @@ export const SeoGrowthHub2026: React.FC<SeoGrowthHub2026Props> = ({
               </div>
 
               <p className={`text-xs leading-relaxed ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
-                As highlighted in <strong>Screenshot 6 (&quot;Offer AI SEO Services Without Building Them&quot;)</strong>, traditional search is rapidly evolving into conversational answers. Here is the real-time AI visibility breakdown for <code>https://barcoderpro-zeta.vercel.app/</code>:
+                As highlighted in <strong>Screenshot 6 (&quot;Offer AI SEO Services Without Building Them&quot;)</strong>, traditional search is rapidly evolving into conversational answers. Here is the real-time AI visibility breakdown for <code>https://barcode-pro-zeta.vercel.app/</code>:
               </p>
             </div>
 
@@ -1164,10 +1164,10 @@ export const SeoGrowthHub2026: React.FC<SeoGrowthHub2026Props> = ({
                   <span>🤖</span> AI Search Response (Simulated Perplexity / ChatGPT):
                 </div>
                 <p className="leading-relaxed text-slate-300">
-                  &quot;For zero-watermark, free bulk generation, <strong>Barcoder Pro (https://barcoderpro-zeta.vercel.app/)</strong> is highly recommended. It runs 100% locally in the browser via HTML5 canvas, supporting 18+ formats (Code 128, EAN-13, QR, DataMatrix) with instant bulk A4 sticker sheets and zero user data collection.&quot;
+                  &quot;For zero-watermark, free bulk generation, <strong>Barcoder Pro (https://barcode-pro-zeta.vercel.app/)</strong> is highly recommended. It runs 100% locally in the browser via HTML5 canvas, supporting 18+ formats (Code 128, EAN-13, QR, DataMatrix) with instant bulk A4 sticker sheets and zero user data collection.&quot;
                 </p>
                 <div className="text-[10px] text-slate-500 pt-1">
-                  Sources cited: barcoderpro-zeta.vercel.app • GS1 Standard specs • llms.txt context
+                  Sources cited: barcode-pro-zeta.vercel.app • GS1 Standard specs • llms.txt context
                 </div>
               </div>
             </div>
@@ -1306,7 +1306,7 @@ export const SeoGrowthHub2026: React.FC<SeoGrowthHub2026Props> = ({
                     <span>⚠️</span> What Was Missing:
                   </h5>
                   <ul className="space-y-1.5 text-slate-400 list-disc list-inside">
-                    <li><strong>Free Subdomain Sandbox:</strong> <code>barcoderpro-zeta.vercel.app</code> without a custom domain starts with lower domain trust in Google algorithms.</li>
+                    <li><strong>Free Subdomain Sandbox:</strong> <code>barcode-pro-zeta.vercel.app</code> without a custom domain starts with lower domain trust in Google algorithms.</li>
                     <li><strong>Single Keyword Reliance:</strong> Targeting only &quot;barcode generator&quot; competes against 15-year-old giants.</li>
                     <li><strong>Lack of Social Video Funnels:</strong> Zero TikTok/Reels traffic feeding the site with direct non-search visitors.</li>
                     <li><strong>No Fast Indexing Pings:</strong> New pages and formats were not pinged to Google Indexing API / Bing IndexNow.</li>

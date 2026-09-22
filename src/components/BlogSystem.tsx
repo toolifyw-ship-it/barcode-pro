@@ -214,7 +214,7 @@ export const BlogSystem: React.FC<BlogSystemProps> = ({ path, isDarkMode, naviga
       <p class="mb-4">2D codes like QR Code and DataMatrix store up to 4,296 characters vertically and horizontally. Feature Reed-Solomon error correction to remain scannable even if up to 30% damaged.</p>
     `;
     widgetFormat = "QR";
-    widgetPlaceholder = "https://barcoderpro-zeta.vercel.app/";
+    widgetPlaceholder = "https://barcode-pro-zeta.vercel.app/";
   } else if (path.includes("ean13-vs-code128")) {
     blogTitle = "EAN-13 vs. Code 128: Choosing the Right Barcode for Your Business";
     blogSubtitle = "Key differences in character capacity, scanner compatibility, and point-of-sale checkout requirements.";

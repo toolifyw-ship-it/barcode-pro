@@ -5,7 +5,7 @@
 // 1. NEVER hardcode live secret keys in code: Use REPLACE_WITH_ENV_ placeholders.
 // 2. Keys come from SITE_CONFIG environment variables only.
 // 3. Backend HMAC must verify, frontend never sets isPaidVerified=true.
-// 4. Default income model for barcoderpro-zeta is "adsense_only".
+// 4. Default income model for barcode-pro-zeta is "adsense_only".
 // ============================================================================
 
 export interface PlanConfig {
@@ -46,7 +46,7 @@ declare global {
 // Initialized at VERY TOP of runtime
 export const SITE_CONFIG: SiteConfig = {
   siteName: "BarcoderPro", // Change per site: SecureSaaS, FluxCall, TaxPilotAI etc
-  domain: "barcoderpro-zeta.vercel.app", // Change per site
+  domain: "barcode-pro-zeta.vercel.app", // Change per site
   incomeModel: "adsense_only", // OPTIONS: "adsense_only" OR "subscription_only" OR "hybrid" - THIS CONTROLS INCOME
   adsenseId: "REPLACE_WITH_ENV_ADSENSE_ID", // If incomeModel adsense_only or hybrid, put real pub- ID in ENV, if subscription_only set "DISABLED"
   razorpayKey: "REPLACE_WITH_ENV_KEY", // If subscription_only or hybrid, put real rzp_ in ENV, if adsense_only set "DISABLED"

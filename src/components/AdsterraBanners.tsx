@@ -118,16 +118,26 @@ export const AdsterraAdSlot: React.FC<{
   }, [adKey, width, height, title]);
 
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden max-w-full ${className}`}>
+    <div className={`relative flex items-center justify-center overflow-hidden max-w-full ad-skeleton-wrapper ${className}`} style={{ minWidth: `${Math.min(width, 320)}px`, minHeight: `${height}px` }}>
+      {/* Background skeleton label during fetching */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 select-none">
+        <span className="text-[10px] font-bold text-slate-500/80 uppercase tracking-widest">
+          {title}
+        </span>
+        <span className="text-[9px] text-slate-600/70 mt-0.5">
+          {width} × {height}
+        </span>
+      </div>
+
       <div 
         ref={containerRef} 
-        className="flex items-center justify-center max-w-full"
+        className="relative z-10 flex items-center justify-center max-w-full"
         style={{ width: `${width}px`, height: `${height}px`, maxWidth: "100%" }}
       />
       {isAdBlockDetected && (
-        <div className="absolute inset-0 bg-slate-900/90 border border-slate-700/60 rounded-xl flex flex-col items-center justify-center p-3 text-center pointer-events-none">
+        <div className="absolute inset-0 z-20 bg-slate-900/90 border border-slate-700/60 rounded-xl flex flex-col items-center justify-center p-3 text-center pointer-events-none">
           <span className="text-[11px] font-bold text-amber-400 mb-1">🛡️ Ad Blocker Detected</span>
-          <span className="text-[10px] text-slate-400">Please disable AdBlock to support free tools</span>
+          <span className="text-[10px] text-slate-400">Please consider whitelisting to support free tools</span>
         </div>
       )}
     </div>

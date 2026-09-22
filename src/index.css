@@ -495,6 +495,15 @@ img {
 /* ==========================================================
    MODULE 1: AD CONTAINER CLS PREVENTION & SKELETON LOADERS
    ========================================================== */
+@keyframes adSkeletonPulse {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 .ad-slot-wrapper {
   position: relative;
   width: 100%;
@@ -503,9 +512,29 @@ img {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin: 1.5rem auto;
+  margin: 1.25rem auto;
   overflow: hidden;
   contain: layout style;
+}
+
+.ad-skeleton-wrapper {
+  position: relative;
+  background: linear-gradient(
+    90deg,
+    rgba(15, 23, 42, 0.75) 0%,
+    rgba(30, 41, 59, 0.95) 50%,
+    rgba(15, 23, 42, 0.75) 100%
+  );
+  background-size: 200% 100%;
+  animation: adSkeletonPulse 2.4s infinite ease-in-out;
+  border-radius: 14px;
+  border: 1px solid rgba(51, 65, 85, 0.45);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  transition: all 0.3s ease;
 }
 
 .ad-banner-responsive {
@@ -525,7 +554,7 @@ img {
 .ad-skeleton-shimmer {
   background: linear-gradient(90deg, rgba(30, 41, 59, 0.4) 0%, rgba(51, 65, 85, 0.6) 50%, rgba(30, 41, 59, 0.4) 100%);
   background-size: 200% 100%;
-  animation: shimmer 2s infinite ease-in-out;
+  animation: adSkeletonPulse 2s infinite ease-in-out;
   border-radius: 12px;
   border: 1px dashed rgba(148, 163, 184, 0.2);
 }
@@ -536,6 +565,10 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.6) 0%, rgba(30, 41, 59, 0.8) 50%, rgba(15, 23, 42, 0.6) 100%);
+  background-size: 200% 100%;
+  animation: adSkeletonPulse 2.4s infinite ease-in-out;
+  border-radius: 12px;
 }
 
 #container-7e837b037212e65acf251eda0a3a4f79:empty::after {

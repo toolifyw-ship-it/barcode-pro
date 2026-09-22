@@ -17,5 +17,5 @@ Allow: /
 User-agent: Applebot-Extended
 Allow: /
 
-Sitemap: https://barcoderpro-zeta.vercel.app/sitemap.xml
+Sitemap: https://barcode-pro-zeta.vercel.app/sitemap.xml
 
