@@ -40,11 +40,11 @@ export const AdsterraRectangle300x250: React.FC<AdProps> = ({ className = "" }) 
   `;
 
   return (
-    <div className={`flex flex-col items-center justify-center my-3 ${className}`}>
+    <div className={`flex flex-col items-center justify-center my-3 w-full max-w-full overflow-hidden ${className}`}>
       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">
         Sponsored Advertisement
       </span>
-      <div className="w-[300px] h-[250px] bg-slate-900/30 border border-slate-800/60 rounded-xl overflow-hidden shadow-sm flex items-center justify-center">
+      <div className="w-[300px] max-w-full h-[250px] bg-slate-900/30 border border-slate-800/60 rounded-xl overflow-hidden shadow-sm flex items-center justify-center">
         <iframe
           title="Sponsored Ad 300x250"
           srcDoc={srcDocContent}
@@ -52,7 +52,7 @@ export const AdsterraRectangle300x250: React.FC<AdProps> = ({ className = "" }) 
           height={250}
           frameBorder={0}
           scrolling="no"
-          className="border-0 overflow-hidden"
+          className="border-0 overflow-hidden max-w-full"
           sandbox="allow-scripts allow-same-origin allow-popups"
           loading="lazy"
         />
@@ -64,8 +64,8 @@ export const AdsterraRectangle300x250: React.FC<AdProps> = ({ className = "" }) 
 /**
  * Responsive Header/Footer Banner
  * Automatically serves:
- * - 320x50 on mobile (< 640px) (Code 2)
- * - 728x90 on tablet & desktop (≥ 640px) (Code 3)
+ * - 320x50 on mobile and portrait tablets (< 768px) (Code 2)
+ * - 728x90 on landscape tablets, laptops & desktops (≥ 768px) (Code 3)
  */
 export const AdsterraResponsiveBanner: React.FC<AdProps> = ({ className = "" }) => {
   const mobileSrcDoc = `
@@ -117,13 +117,13 @@ export const AdsterraResponsiveBanner: React.FC<AdProps> = ({ className = "" }) 
   `;
 
   return (
-    <div className={`flex flex-col items-center justify-center my-4 w-full px-2 ${className}`}>
+    <div className={`flex flex-col items-center justify-center my-4 w-full max-w-full overflow-hidden px-2 ${className}`}>
       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">
         Sponsored Advertisement
       </span>
 
-      {/* Mobile View (320x50) */}
-      <div className="block sm:hidden w-[320px] h-[50px] bg-slate-900/30 border border-slate-800/60 rounded-lg overflow-hidden shadow-xs">
+      {/* Mobile & Small Tablet View (< 768px: 320x50, zero overflow) */}
+      <div className="block md:hidden w-[320px] max-w-full h-[50px] bg-slate-900/30 border border-slate-800/60 rounded-lg overflow-hidden shadow-xs">
         <iframe
           title="Sponsored Ad 320x50"
           srcDoc={mobileSrcDoc}
@@ -131,14 +131,14 @@ export const AdsterraResponsiveBanner: React.FC<AdProps> = ({ className = "" }) 
           height={50}
           frameBorder={0}
           scrolling="no"
-          className="border-0 overflow-hidden"
+          className="border-0 overflow-hidden max-w-full"
           sandbox="allow-scripts allow-same-origin allow-popups"
           loading="lazy"
         />
       </div>
 
-      {/* Tablet & Desktop View (728x90) */}
-      <div className="hidden sm:block w-[728px] h-[90px] max-w-full bg-slate-900/30 border border-slate-800/60 rounded-xl overflow-hidden shadow-xs">
+      {/* Tablet Landscape, Laptop & Desktop View (≥ 768px: 728x90) */}
+      <div className="hidden md:flex justify-center items-center w-[728px] max-w-full h-[90px] bg-slate-900/30 border border-slate-800/60 rounded-xl overflow-hidden shadow-xs">
         <iframe
           title="Sponsored Ad 728x90"
           srcDoc={desktopSrcDoc}
@@ -146,7 +146,7 @@ export const AdsterraResponsiveBanner: React.FC<AdProps> = ({ className = "" }) 
           height={90}
           frameBorder={0}
           scrolling="no"
-          className="border-0 overflow-hidden"
+          className="border-0 overflow-hidden max-w-full"
           sandbox="allow-scripts allow-same-origin allow-popups"
           loading="lazy"
         />

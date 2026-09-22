@@ -3392,6 +3392,9 @@ export default function App() {
 
           </div>
         </div>
+
+        {/* Responsive Ad Placement on Scanner Page */}
+        <AdsterraResponsiveBanner className="mt-8" />
       </div>
     );
   };
@@ -4498,6 +4501,9 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {/* Responsive Ad Placement on Bulk Generator Page */}
+        <AdsterraResponsiveBanner className="mt-8" />
       </div>
     );
   };
